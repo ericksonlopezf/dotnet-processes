@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>High-performance Oracle persistence provider for EricksonLopez.Processes using Oracle.ManagedDataAccess.Core and JSON state storage.</Description>
+    <PackageTags>$(CommonPackageTags);oracle;oracledb;database;persistence;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

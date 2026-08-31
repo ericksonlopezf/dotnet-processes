@@ -1,0 +1,32 @@
+# Global repository owners
+* @ericksonlopez
+
+# Core contracts and execution engine
+/src/EricksonLopez.Processes.Abstractions/ @ericksonlopez
+/src/EricksonLopez.Processes/ @ericksonlopez
+
+# Tooling and analyzers
+/src/EricksonLopez.Processes.Generator/ @ericksonlopez
+/src/EricksonLopez.Processes.Analyzers/ @ericksonlopez
+
+# Infrastructure packages
+/src/EricksonLopez.Processes.DependencyInjection/ @ericksonlopez
+/src/EricksonLopez.Processes.SystemTextJson/ @ericksonlopez
+/src/EricksonLopez.Processes.Testing/ @ericksonlopez
+/src/EricksonLopez.Processes.Events/ @ericksonlopez
+/src/EricksonLopez.Processes.Mediator/ @ericksonlopez
+/src/EricksonLopez.Processes.Outbox/ @ericksonlopez
+
+# Storage adapters
+/src/EricksonLopez.Processes.Storage.PostgreSql/ @ericksonlopez
+/src/EricksonLopez.Processes.Storage.SqlServer/ @ericksonlopez
+/src/EricksonLopez.Processes.Storage.Sqlite/ @ericksonlopez
+/src/EricksonLopez.Processes.Storage.MySql/ @ericksonlopez
+/src/EricksonLopez.Processes.Storage.MariaDb/ @ericksonlopez
+/src/EricksonLopez.Processes.Storage.Oracle/ @ericksonlopez
+
+# CI/CD Workflows
+/.github/ @ericksonlopez
+
+# Documentation
+/docs/ @ericksonlopez

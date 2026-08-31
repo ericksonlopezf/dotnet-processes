@@ -1,0 +1,100 @@
+## =====================================
+## .NET Build & Compilation
+## =====================================
+bin/
+obj/
+Generated/
+[Bb]in/
+[Oo]bj/
+
+## =====================================
+## IDEs & Editors
+## =====================================
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.pidb
+*.vsp
+*.vspx
+*.sap
+*.aps
+
+# JetBrains (Rider / ReSharper)
+.idea/
+*.DotSettings.user
+_ReSharper*/
+
+# VS Code
+.vscode/
+
+## =====================================
+## Testing, Code Coverage & Mutation
+## =====================================
+TestResults/
+*.trx
+coverage/
+CoverageReport/
+*.cobertura.xml
+*.coverage
+*.coveragexml
+
+# Stryker Mutator
+.stryker-tmp/
+StrykerOutput/
+StrykerResults/
+
+## =====================================
+## Code Quality & Static Analysis
+## =====================================
+.sonarqube/
+.sonar/
+
+## =====================================
+## NuGet Packages & Artifacts
+## =====================================
+*.nupkg
+*.snupkg
+artifacts/
+BenchmarkDotNet.Artifacts/
+
+## =====================================
+## Logs, Dumps & Diagnostics
+## =====================================
+*.log
+*.dmp
+*.crash
+*.stackdump
+
+## =====================================
+## Secrets & Local Environment Variables
+## =====================================
+*.env
+*.env.local
+*.local.json
+
+## =====================================
+## Operating System & Git Files
+## =====================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+# Git / Merge leftovers
+*.orig
+*.rej
+*.swp

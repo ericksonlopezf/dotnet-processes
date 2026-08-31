@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>System.Text.Json AOT-compatible serialization helpers and converters for EricksonLopez.Processes.</Description>
+    <PackageTags>$(CommonPackageTags);system-text-json;json;serialization;converters;source-generation;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>High-performance MySQL persistence provider for EricksonLopez.Processes using MySqlConnector and JSON state storage.</Description>
+    <PackageTags>$(CommonPackageTags);mysql;mysqlconnector;database;persistence;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+    <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

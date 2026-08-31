@@ -1,0 +1,47 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/EricksonLopez.Processes.Benchmarks/EricksonLopez.Processes.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/InvoiceCertificationSample/InvoiceCertificationSample.csproj" />
+    <Project Path="samples/NativeAotSample/NativeAotSample.csproj" />
+    <Project Path="samples/OrderFulfillmentSample/OrderFulfillmentSample.csproj" />
+    <Project Path="samples/StateMigrationSample/StateMigrationSample.csproj" />
+    <Project Path="samples/EricksonLopez.Processes.Showcase/EricksonLopez.Processes.Showcase.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/EricksonLopez.Processes.Abstractions/EricksonLopez.Processes.Abstractions.csproj" />
+    <Project Path="src/EricksonLopez.Processes.DependencyInjection/EricksonLopez.Processes.DependencyInjection.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Generator/EricksonLopez.Processes.Generator.csproj" />
+    <Project Path="src/EricksonLopez.Processes.SystemTextJson/EricksonLopez.Processes.SystemTextJson.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Testing/EricksonLopez.Processes.Testing.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Outbox/EricksonLopez.Processes.Outbox.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Mediator/EricksonLopez.Processes.Mediator.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Events/EricksonLopez.Processes.Events.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Storage.PostgreSql/EricksonLopez.Processes.Storage.PostgreSql.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Storage.SqlServer/EricksonLopez.Processes.Storage.SqlServer.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Storage.Sqlite/EricksonLopez.Processes.Storage.Sqlite.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Storage.MySql/EricksonLopez.Processes.Storage.MySql.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Storage.MariaDb/EricksonLopez.Processes.Storage.MariaDb.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Storage.Oracle/EricksonLopez.Processes.Storage.Oracle.csproj" />
+    <Project Path="src/EricksonLopez.Processes.Analyzers/EricksonLopez.Processes.Analyzers.csproj" />
+    <Project Path="src/EricksonLopez.Processes/EricksonLopez.Processes.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EricksonLopez.Processes.AotSmokeTest/EricksonLopez.Processes.AotSmokeTest.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.ArchitectureTests/EricksonLopez.Processes.ArchitectureTests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Generator.Tests/EricksonLopez.Processes.Generator.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Outbox.Tests/EricksonLopez.Processes.Outbox.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Mediator.Tests/EricksonLopez.Processes.Mediator.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Events.Tests/EricksonLopez.Processes.Events.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.MySql.Tests/EricksonLopez.Processes.Storage.MySql.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.MariaDb.Tests/EricksonLopez.Processes.Storage.MariaDb.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.PostgreSql.Tests/EricksonLopez.Processes.Storage.PostgreSql.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.Sqlite.Tests/EricksonLopez.Processes.Storage.Sqlite.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.SqlServer.Tests/EricksonLopez.Processes.Storage.SqlServer.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.Oracle.Tests/EricksonLopez.Processes.Storage.Oracle.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Tests/EricksonLopez.Processes.Tests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.Storage.IntegrationTests/EricksonLopez.Processes.Storage.IntegrationTests.csproj" />
+    <Project Path="tests/EricksonLopez.Processes.TrimTests/EricksonLopez.Processes.TrimTests.csproj" />
+  </Folder>
+</Solution>

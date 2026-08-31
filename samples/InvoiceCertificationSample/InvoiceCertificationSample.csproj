@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\EricksonLopez.Processes\EricksonLopez.Processes.csproj" />
+    <ProjectReference Include="..\..\src\EricksonLopez.Processes.SystemTextJson\EricksonLopez.Processes.SystemTextJson.csproj" />
+    <ProjectReference Include="..\..\src\EricksonLopez.Processes.DependencyInjection\EricksonLopez.Processes.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\src\EricksonLopez.Processes.Testing\EricksonLopez.Processes.Testing.csproj" />
+  </ItemGroup>
+</Project>

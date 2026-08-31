@@ -1,0 +1,13 @@
+<Project>
+  <Import Project="..\Directory.Build.props" Condition="Exists('..\Directory.Build.props')" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- ADR-034: Osherove naming convention for test living specifications -->
+    <NoWarn>$(NoWarn);IDE1006;CA1707;NU1901;NU1902;NU1903;NU1904;NU1905</NoWarn>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904;NU1905</WarningsNotAsErrors>
+    <EnableTrimAnalyzer Condition="'$(PublishAot)' != 'true'">false</EnableTrimAnalyzer>
+  </PropertyGroup>
+</Project>
+
+

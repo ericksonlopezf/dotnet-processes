@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>High-performance SQL Server persistence provider for EricksonLopez.Processes using Microsoft.Data.SqlClient and JSON state storage.</Description>
+    <PackageTags>$(CommonPackageTags);sqlserver;mssql;sql-server;database;persistence;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>EricksonLopez.Processes.Outbox</AssemblyName>
+    <RootNamespace>EricksonLopez.Processes.Outbox</RootNamespace>
+    
+    <Title>EricksonLopez.Processes.Outbox</Title>
+    <Description>Outbox pattern integration for EricksonLopez.Processes. Dispatches process effects reliably using transactional outbox storage.</Description>
+    <PackageTags>$(CommonPackageTags);outbox-pattern;transactional-outbox;event-driven;reliable-messaging;distributed-systems;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes\EricksonLopez.Processes.csproj" />
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EricksonLopez.Outbox" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EricksonLopez.Processes.Outbox.Tests" />
+  </ItemGroup>
+</Project>

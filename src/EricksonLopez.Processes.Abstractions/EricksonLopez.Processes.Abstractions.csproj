@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Pure abstractions, identifiers, state contracts, and store interfaces for EricksonLopez.Processes.</Description>
+    <PackageTags>$(CommonPackageTags);abstractions;contracts;state-machine;optimistic-concurrency;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+</Project>

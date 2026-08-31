@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>EricksonLopez.Processes.Mediator</AssemblyName>
+    <RootNamespace>EricksonLopez.Processes.Mediator</RootNamespace>
+    
+    <Title>EricksonLopez.Processes.Mediator</Title>
+    <Description>In-process mediator dispatching integration for EricksonLopez.Processes. Bridges process manager effects to EricksonLopez.Mediator commands and notifications.</Description>
+    <PackageTags>$(CommonPackageTags);mediator;cqrs;commands;notifications;in-process;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes\EricksonLopez.Processes.csproj" />
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EricksonLopez.Mediator" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EricksonLopez.Processes.Mediator.Tests" />
+  </ItemGroup>
+</Project>

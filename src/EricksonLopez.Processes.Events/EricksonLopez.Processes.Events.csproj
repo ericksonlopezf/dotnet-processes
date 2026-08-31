@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>EricksonLopez.Processes.Events</AssemblyName>
+    <RootNamespace>EricksonLopez.Processes.Events</RootNamespace>
+    
+    <Title>EricksonLopez.Processes.Events</Title>
+    <Description>Event dispatching integration for EricksonLopez.Processes. Bridges process manager effects to EricksonLopez.Events.Contracts event publishers.</Description>
+    <PackageTags>$(CommonPackageTags);event-driven;domain-events;integration-events;event-publishing;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes\EricksonLopez.Processes.csproj" />
+    <ProjectReference Include="..\EricksonLopez.Processes.Abstractions\EricksonLopez.Processes.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EricksonLopez.Events.Contracts" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EricksonLopez.Processes.Events.Tests" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Microsoft.Extensions.DependencyInjection integration extensions for EricksonLopez.Processes.</Description>
+    <PackageTags>$(CommonPackageTags);dependency-injection;di;ioc;service-collection;microsoft-extensions;native-aot;trimming</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EricksonLopez.Processes\EricksonLopez.Processes.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+</Project>
