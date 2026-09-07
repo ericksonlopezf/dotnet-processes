@@ -5,7 +5,7 @@ High-performance, trimming-safe, and Native AOT-ready Process Manager and Saga o
 [![CI](https://img.shields.io/github/actions/workflow/status/ericksonlopezf/dotnet-processes/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/ericksonlopezf/dotnet-processes/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/ericksonlopezf/dotnet-processes?style=for-the-badge&logo=codecov&logoColor=white)](https://codecov.io/gh/ericksonlopezf/dotnet-processes)
 [![Quality Gate](https://img.shields.io/sonar/quality_gate/ericksonlopezf_dotnet-processes?server=https%3A%2F%2Fsonarcloud.io&style=for-the-badge&logo=sonarcloud&logoColor=white)](https://sonarcloud.io/summary/new_code?id=ericksonlopezf_dotnet-processes)
-[![Mutation Score](https://img.shields.io/badge/Mutation_Score-%E2%89%A598%25-brightgreen?style=for-the-badge&logo=stryker&logoColor=white)](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/ci-cd.md)
+[![Mutation Score](https://img.shields.io/badge/Mutation_Score-100%25-brightgreen?style=for-the-badge&logo=stryker&logoColor=white)](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/ci-cd.md)
 [![NuGet](https://img.shields.io/nuget/v/EricksonLopez.Processes?style=for-the-badge&logo=nuget&logoColor=white&color=512BD4)](https://www.nuget.org/packages/EricksonLopez.Processes)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/EricksonLopez.Processes?style=for-the-badge&logo=nuget&logoColor=white&color=004880)](https://www.nuget.org/packages/EricksonLopez.Processes)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://github.com/ericksonlopezf/dotnet-processes/blob/main/LICENSE)
@@ -896,23 +896,23 @@ public async Task Coordinator_ShouldExhaustRetries_WhenStoreConsistentlyFails()
 <!-- STRYKER_RESULTS_START -->
 | Package | Mutation Score | Mutants Killed / Total | Quality Gate Status |
 |:---|:---:|:---:|:---:|
-| **Abstractions** | **100%** | — | ✅ HIGH |
-| **Analyzers** | **100%** | — | ✅ HIGH |
-| **Core** | **100%** | — | ✅ HIGH |
-| **DependencyInjection** | **100%** | — | ✅ HIGH |
-| **Events** | **100%** | — | ✅ HIGH |
-| **Generator** | **100%** | — | ✅ HIGH |
-| **Mediator** | **100%** | — | ✅ HIGH |
-| **Outbox** | **100%** | — | ✅ HIGH |
-| **StorageMariaDb** | **100%** | — | ✅ HIGH |
-| **StorageMySql** | **100%** | — | ✅ HIGH |
-| **StorageOracle** | **100%** | — | ✅ HIGH |
-| **StoragePostgreSql** | **100%** | — | ✅ HIGH |
-| **StorageSqlite** | **100%** | — | ✅ HIGH |
-| **StorageSqlServer** | **100%** | — | ✅ HIGH |
-| **SystemTextJson** | **100%** | — | ✅ HIGH |
-| **Testing** | **100%** | — | ✅ HIGH |
-| **OVERALL ECOSYSTEM** | **100.00%** | — | **✅ HIGH** |
+| **Abstractions** | **100%** | 290 / 290 | ✅ HIGH |
+| **Analyzers** | **100%** | 34 / 34 | ✅ HIGH |
+| **Core** | **100%** | 168 / 168 | ✅ HIGH |
+| **DependencyInjection** | **100%** | 8 / 8 | ✅ HIGH |
+| **Events** | **100%** | 6 / 6 | ✅ HIGH |
+| **Generator** | **100%** | 157 / 157 | ✅ HIGH |
+| **Mediator** | **100%** | 15 / 15 | ✅ HIGH |
+| **Outbox** | **100%** | 12 / 12 | ✅ HIGH |
+| **StorageMariaDb** | **100%** | 54 / 54 | ✅ HIGH |
+| **StorageMySql** | **100%** | 54 / 54 | ✅ HIGH |
+| **StorageOracle** | **100%** | 62 / 62 | ✅ HIGH |
+| **StoragePostgreSql** | **100%** | 51 / 51 | ✅ HIGH |
+| **StorageSqlite** | **100%** | 69 / 69 | ✅ HIGH |
+| **StorageSqlServer** | **100%** | 54 / 54 | ✅ HIGH |
+| **SystemTextJson** | **100%** | 64 / 64 | ✅ HIGH |
+| **Testing** | **100%** | 35 / 35 | ✅ HIGH |
+| **OVERALL ECOSYSTEM** | **100.00%** | **1133 / 1133** | **✅ HIGH** |
 <!-- STRYKER_RESULTS_END -->
 
 ```bash
