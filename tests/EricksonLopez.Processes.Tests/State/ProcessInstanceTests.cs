@@ -122,10 +122,10 @@ public class ProcessInstanceTests
         advanced.Status.Should().Be(nonTerminalStatus);
         advanced.CompletedAt.Should().BeNull();
 
-        // Also test transitioning back from a completed state to non-terminal resets completedAt to null
+        // Transitioning back from a completed state to non-terminal is forbidden and throws InvalidProcessTransitionException
         var previouslyCompleted = instance.Advance(instance.State, ProcessStatus.Completed, nextTime);
-        var resumed = previouslyCompleted.Advance(instance.State, nonTerminalStatus, nextTime.AddMinutes(5));
-        resumed.CompletedAt.Should().BeNull();
+        Action act = () => previouslyCompleted.Advance(instance.State, nonTerminalStatus, nextTime.AddMinutes(5));
+        act.Should().Throw<InvalidProcessTransitionException>();
     }
 
     [Fact]

@@ -87,6 +87,11 @@ public static class Level04OutboxIntegrationDemo
         Console.ResetColor();
 
         var outbox = new InMemoryOutbox();
+        // 0. Demonstrate DI registration
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddProcessesOutbox();
+        Console.WriteLine("Registered AddProcessesOutbox() in DI.");
+
         var dispatcher = new OutboxProcessDispatcher(outbox);
         var transaction = new DummyOutboxTransaction();
         var processId = ProcessId.NewId();
@@ -100,12 +105,15 @@ public static class Level04OutboxIntegrationDemo
             ProcessEffect.CreateCompensation("ChargeCreditCard", new { RefundAmount = 199.95m })
         };
 
-        Console.WriteLine($"Dispatching {effects.Length} ProcessEffects to transactional Outbox...");
+        // 2. Dispatch single effect via DispatchEffectAsync
+        await dispatcher.DispatchEffectAsync(effects[0], processId, transaction);
+        Console.WriteLine("Dispatched single effect via DispatchEffectAsync.");
 
-        // 2. Dispatch all effects atomically within the transaction
+        // 3. Dispatch remaining effects via DispatchEffectsAsync
+        Console.WriteLine($"Dispatching {effects.Length} ProcessEffects to transactional Outbox via DispatchEffectsAsync...");
         await dispatcher.DispatchEffectsAsync(effects, processId, transaction);
 
-        // 3. Verify messages stored in outbox with proper metadata
+        // 4. Verify messages stored in outbox with proper metadata
         Console.WriteLine();
         Console.WriteLine($"Total Outbox Messages Stored: {outbox.StoredMessages.Count}");
         foreach (var (payload, meta, deliverAt) in outbox.StoredMessages)

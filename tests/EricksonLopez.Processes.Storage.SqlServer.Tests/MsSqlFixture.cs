@@ -43,7 +43,7 @@ public sealed class MsSqlFixture : IAsyncLifetime
                     UpdatedAt DATETIMEOFFSET NOT NULL,
                     CompletedAt DATETIMEOFFSET NULL
                 );
-                CREATE INDEX IX_ProcessInstances_CorrelationId ON ProcessInstances(CorrelationId);
+                CREATE UNIQUE INDEX IX_ProcessInstances_CorrelationId ON ProcessInstances(CorrelationId);
             END
             """;
 

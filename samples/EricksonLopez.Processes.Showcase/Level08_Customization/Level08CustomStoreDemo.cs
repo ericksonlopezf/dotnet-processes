@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EricksonLopez.Processes;
 using EricksonLopez.Processes.Abstractions;
+using EricksonLopez.Processes.Testing;
 
 namespace EricksonLopez.Processes.Showcase.Level08_Customization;
 
@@ -118,6 +119,19 @@ public static class Level08CustomStoreDemo
 
         Console.WriteLine();
         Console.WriteLine($"Total Custom Store Save Invocations: {customStore.SaveOperationsCount}");
+
+        // 3. Demonstrate GetByCorrelationIdAsync
+        var corrId = CorrelationId.From(processId.ToString());
+        var foundInstance = await customStore.GetByCorrelationIdAsync(corrId);
+        Console.WriteLine($"GetByCorrelationIdAsync query for '{corrId.Value}': Found = {foundInstance != null} (Revision: {foundInstance?.Revision.Value})");
+
+        var memStore = new InMemoryProcessStore<CustomAuditState>();
+        if (foundInstance != null)
+        {
+            await memStore.SaveAsync(foundInstance);
+            var memFound = await memStore.GetByCorrelationIdAsync(corrId);
+            Console.WriteLine($"InMemoryProcessStore.GetByCorrelationIdAsync: Found = {memFound != null}");
+        }
 
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("✔ Level 08-A Custom Store demo completed successfully.");

@@ -9,13 +9,14 @@ This document defines the complete Continuous Integration and Continuous Deploym
 | Pipeline Name | Workflow File | Trigger | Primary Purpose |
 |---|---|---|---|
 | **Main CI** | `ci.yml` | `push`, `pull_request` (`main`, `develop`) | Fast PR feedback: builds, tests, coverage, NativeAOT smoke test |
-| **Reusable Build & Test** | `dotnet-build-test.yml` | `workflow_call` | Build, test, coverage, SonarCloud |
+| **Reusable Build & Test** | `dotnet-build-test.yml` | `workflow_call` | Build, test, coverage, SonarCloud analysis |
 | **NativeAOT Smoke Test** | `aot-smoke-test.yml` | `push`/`PR`, `workflow_call`, `workflow_dispatch` | Compile and run a NativeAOT binary (`PublishAot=true`) |
-| **Publish NuGet** | `publish.yml` | `push v*.*.*` tag, `workflow_dispatch` | Pack + sign + publish all packages to NuGet |
+| **Benchmark Regression Gate** | `benchmark-regression-gate.yml` | `pull_request` (`main`, `develop`), `workflow_dispatch` | Enforce zero-allocation hotpath and <= 5% latency regression |
+| **Publish NuGet** | `publish.yml` | `push v*.*.*` tag, `workflow_dispatch` | Pack + sign + attest + publish 16 packages to NuGet.org |
 | **Release Please** | `release-please.yml` | `push` → `main` | Automated release PR + dispatch publish |
-| **Mutation Testing** | `mutation-testing.yml` | Schedule Mon 04:00 UTC, `workflow_dispatch` | Stryker mutation analysis across all Processes packages |
-| **Benchmarks** | `benchmarks.yml` | `workflow_call`, `workflow_dispatch` | BenchmarkDotNet baseline capture |
-| **Weekly Benchmarks** | `weekly-benchmarks.yml` | Schedule Sun 02:00 UTC, `workflow_dispatch` | Deep benchmark across .NET 10 |
+| **Mutation Testing** | `mutation-testing.yml` | Schedule Mon 04:00 UTC, `workflow_dispatch` | Stryker mutation analysis across all 16 library packages |
+| **Benchmarks** | `benchmarks.yml` | `workflow_call`, `workflow_dispatch` | BenchmarkDotNet on-demand execution |
+| **Weekly Benchmarks** | `weekly-benchmarks.yml` | Schedule Sun 02:00 UTC, `workflow_dispatch` | Deep cross-TFM benchmark suite (.NET 8, 9, 10) |
 | **Repo Compliance** | `repo-compliance.yml` | `push`/`PR` (`main`), `workflow_dispatch` | Architecture, licensing, and compliance invariants |
 
 ---
@@ -52,7 +53,7 @@ flowchart TD
 ```
 
 > [!NOTE]
-> **Mutation Testing is NOT part of the main CI.** It runs as a separate scheduled job (`mutation-testing.yml`) every Monday at 04:00 UTC, or on manual dispatch.
+> **Mutation Testing and Benchmark Gates are decoupled from the fast CI loop.** Mutation testing runs as a scheduled job (`mutation-testing.yml`) every Monday at 04:00 UTC, and Benchmark regression checks trigger on pull requests touching `src/**` or `benchmarks/**`.
 
 ---
 
@@ -76,7 +77,7 @@ flowchart LR
         G --> H[dotnet restore + build Release]
         H --> I[dotnet test — publish gate]
         I --> J[Upload coverage — publish-gate flag]
-        J --> K[dotnet pack — all packages]
+        J --> K[dotnet pack — all 16 packages]
         K --> L[Sigstore Provenance Attestation]
         L --> M[NuGet OIDC login]
         M --> N[dotnet nuget push --skip-duplicate]
@@ -91,7 +92,7 @@ flowchart LR
 Validates that `EricksonLopez.Processes` packages genuinely compile and run under Native AOT:
 
 1. Publishes `samples/NativeAotSample/NativeAotSample.csproj` with `--PublishAot=true` and `-p:TreatWarningsAsErrors=true`.
-2. Any IL2026 or IL3050 from the trimmer is treated as a build-breaking error.
+2. Any `IL2026` or `IL3050` from the trimmer is treated as a build-breaking error.
 3. Executes the native binary and asserts a 0 exit code.
 
 ---
@@ -102,3 +103,11 @@ Stryker mutation testing enforces rigorous quality thresholds:
 - **High Threshold**: $\ge 100\%$ (Target)
 - **Low Threshold**: $\ge 98\%$ (Acceptable)
 - **Break Threshold**: $< 95\%$ (Build Failure)
+
+---
+
+## 6. Benchmark Regression Gate
+
+Runs on every pull request touching core source code or benchmarks:
+- **Zero-Allocation Invariant**: 0 B heap allocated on hotpath combinators.
+- **Latency Regression Threshold**: Maximum 5% regression vs baseline.

@@ -37,7 +37,7 @@ public sealed class SqliteFixture : IAsyncLifetime, IDisposable
                 UpdatedAt TEXT NOT NULL,
                 CompletedAt TEXT NULL
             );
-            CREATE INDEX IF NOT EXISTS IX_ProcessInstances_CorrelationId ON ProcessInstances(CorrelationId);
+            CREATE UNIQUE INDEX IF NOT EXISTS IX_ProcessInstances_CorrelationId ON ProcessInstances(CorrelationId);
             """;
 
         await using var cmd = new SqliteCommand(ddl, _keepAliveConnection);

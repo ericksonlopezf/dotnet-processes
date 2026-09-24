@@ -373,7 +373,7 @@ public sealed class OracleProcessStoreTests : IClassFixture<OracleFixture>
                         UPDATED_AT VARCHAR2(35) NOT NULL,
                         COMPLETED_AT VARCHAR2(35) NULL
                     )';
-                    EXECUTE IMMEDIATE 'CREATE INDEX IDX_{customTable}_CORR ON {customTable} (CORRELATION_ID)';
+                    EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX IDX_{customTable}_CORR ON {customTable} (CORRELATION_ID)';
                 EXCEPTION
                     WHEN OTHERS THEN
                         IF SQLCODE != -955 THEN

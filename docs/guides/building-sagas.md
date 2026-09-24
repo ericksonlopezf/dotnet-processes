@@ -56,3 +56,16 @@ public sealed class FlightBookingSaga :
     }
 }
 ```
+
+## External Idempotency Requirements
+
+While `EricksonLopez.Processes` guarantees step-by-step durability during Saga compensations (crash-tolerance), the system relies on **At-Least-Once delivery semantics** for dispatched effects.
+
+If a host crashes *after* a `ProcessEffect` (such as a compensation command) is successfully dispatched to the message broker but *before* the saga state (`_store.SaveAsync`) is updated to record that the compensation step was completed, the orchestrator will re-execute the compensation step upon recovery.
+
+Therefore, **all downstream handlers processing `ProcessEffect` messages MUST be fully idempotent**.
+
+### Best Practices for Effect Handlers:
+1. **Idempotency Keys**: Use the `ProcessId` and `CorrelationId` provided in the `ProcessEffect` as idempotency keys in your downstream service.
+2. **Database Constraints**: Utilize unique constraints in your domain database to gracefully handle duplicate compensation commands (e.g., `CancelFlightCommand`).
+3. **Outbox Pattern**: When possible, dispatch `ProcessEffect` instances using a Transactional Outbox that shares a database transaction with the saga's state store to achieve exactly-once processing within the same transactional boundary.

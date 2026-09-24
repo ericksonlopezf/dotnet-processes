@@ -30,16 +30,16 @@ This roadmap documents the architectural evolution, completed milestone deliveri
 │  Phase 2: Performance & Allocation Hardening (v1.0.0-rc2) [COMPLETED]       │
 │    └─ BenchmarkDotNet Baselines, Zero-alloc Hotpath, ISpanParsable IDs      │
 │                                                                             │
-│  Phase 3: Ecosystem Samples & Integration Guides (v1.0.0-final) [COMPLETED] │
+│  Phase 3: Ecosystem Samples & Integration Guides (v1.0.0) [COMPLETED]       │
 │    └─ Dapper/PostgreSQL Store, Outbox Integration, Clean Documentation      │
 │                                                                             │
-│  Phase 4: Schema Evolution & Versioning Extensions (v1.1.0) [COMPLETED]     │
+│  Phase 4: Schema Evolution & Versioning Extensions (v1.0.0) [COMPLETED]     │
 │    └─ Automated Migrator Pipelines, Multi-version Coexistence Samples       │
 │                                                                             │
-│  Phase 5: Competitive Parity & Storage Dialects Expansion [COMPLETED]       │
+│  Phase 5: Competitive Parity & Storage Dialects Expansion (v1.0.0)[COMPLETED]│
 │    └─ Source Generator DI Extension, SQLite/MySQL/MariaDB/Oracle Adapters   │
 │                                                                             │
-│  Phase 6: AOT Hardening & Type Safety (v2.0.0) [PLANNED]                   │
+│  Phase 6: AOT Hardening & Type Safety (v2.0.0 Target) [PLANNED]             │
 │    └─ Typed ProcessEffect payloads, CompensationStep<TPayload>, SemVer Major│
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

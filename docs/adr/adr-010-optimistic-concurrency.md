@@ -1,5 +1,11 @@
 # ADR-010: Optimistic Concurrency Control and Compare-And-Swap (CAS)
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 In high-throughput distributed systems, multiple messages for the same process instance may arrive simultaneously across multiple worker threads or Kubernetes pods.
 

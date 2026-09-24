@@ -275,6 +275,7 @@ public class ProcessCoordinatorTests
             canInitiate: false);
 
         var ex = await act.Should().ThrowAsync<ProcessNotFoundException>();
+        ex.Which.ProcessId.Should().Be(ProcessId.From(orderId));
         ex.Which.Message.Should().Contain("order.fulfillment")
             .And.Contain(orderId.ToString())
             .And.Contain("not found and incoming message cannot initiate it.");
@@ -401,7 +402,7 @@ public class ProcessCoordinatorTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldThrowProcessNotFoundException_WhenCanInitiateIsTrueButFactoryIsNull()
+    public async Task ExecuteAsync_ShouldThrowArgumentNullException_WhenCanInitiateIsTrueButFactoryIsNull()
     {
         var store = new FaultInjectingProcessStore<OrderState>();
         var coordinator = new ProcessCoordinator<OrderState>(store);
@@ -414,7 +415,7 @@ public class ProcessCoordinatorTests
             initialStateFactory: null,
             canInitiate: true);
 
-        await act.Should().ThrowAsync<ProcessNotFoundException>();
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -458,14 +459,14 @@ public class ProcessCoordinatorTests
     }
 
     [Theory]
-    [InlineData(1, 10)]
-    [InlineData(2, 20)]
-    [InlineData(3, 30)]
-    [InlineData(5, 50)]
-    public void DefaultBackoffStrategy_ShouldScaleLinearlyWithAttempts(int attempt, double expectedMs)
+    [InlineData(1, 100)]
+    [InlineData(2, 200)]
+    [InlineData(3, 400)]
+    [InlineData(5, 1000)]
+    public void DefaultBackoffStrategy_ShouldScaleExponentiallyWithJitter(int attempt, double expectedMs)
     {
         var delay = ProcessCoordinator<OrderState>.DefaultBackoffStrategy(attempt);
-        delay.TotalMilliseconds.Should().Be(expectedMs);
+        delay.TotalMilliseconds.Should().BeInRange(expectedMs, expectedMs + 50);
     }
 
     [Fact]
@@ -720,6 +721,7 @@ public class ProcessCoordinatorTests
         var act = async () => await coordinator.CompensateAsync(processId, steps, saga);
 
         var ex = await act.Should().ThrowAsync<ProcessNotFoundException>();
+        ex.Which.ProcessId.Should().Be(processId);
         ex.Which.Message.Should().Contain("order.saga")
             .And.Contain(processId.ToString())
             .And.Contain("not found for compensation");
@@ -773,11 +775,11 @@ public class ProcessCoordinatorTests
             initialState,
             DateTimeOffset.UtcNow);
 
-        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
-        await store.SaveAsync(runningInstance);
-
         var step1 = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow.AddMinutes(-5));
         var step2 = new CompensationStep("ReserveInventory", new { Sku = "ITEM-1" }, DateTimeOffset.UtcNow.AddMinutes(-2));
+
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step1, step2 });
+        await store.SaveAsync(runningInstance);
 
         var result = await coordinator.CompensateAsync(processId, [step1, step2], saga);
 
@@ -819,10 +821,9 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
-        await store.InnerStore.SaveAsync(runningInstance);
-
         var step = new CompensationStep("ChargePayment", new { Amount = 50m }, DateTimeOffset.UtcNow);
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
+        await store.InnerStore.SaveAsync(runningInstance);
         var result = await coordinator.CompensateAsync(processId, [step], saga);
 
         result.IsSuccess.Should().BeTrue();
@@ -849,10 +850,9 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
-        await store.InnerStore.SaveAsync(runningInstance);
-
         var step = new CompensationStep("ChargePayment", new { Amount = 50m }, DateTimeOffset.UtcNow);
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
+        await store.InnerStore.SaveAsync(runningInstance);
         var act = async () => await coordinator.CompensateAsync(processId, [step], saga);
 
         await act.Should().ThrowAsync<ConcurrencyConflictException>();
@@ -873,10 +873,9 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
-        await store.SaveAsync(runningInstance);
-
         var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
+        await store.SaveAsync(runningInstance);
         var result = await coordinator.CompensateAsync(processId, [step], saga);
 
         result.IsSuccess.Should().BeTrue();
@@ -894,14 +893,13 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
+        var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
         await store.SaveAsync(runningInstance);
 
         // Force persistence error on subsequent save
         store.ForcedSaveResult = ProcessSaveResult.PersistenceError;
         var coordinator = new ProcessCoordinator<OrderState>(store);
-
-        var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
         var result = await coordinator.CompensateAsync(processId, [step], saga);
 
         result.IsSuccess.Should().BeFalse();
@@ -919,12 +917,12 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        await store.SaveAsync(instance);
+        var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
+        await store.SaveAsync(runningInstance);
 
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-
-        var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
         var act = async () => await coordinator.CompensateAsync(processId, [step], saga, cancellationToken: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -950,10 +948,9 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var running = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
-        await store.SaveAsync(running);
-
         var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
+        var running = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
+        await store.SaveAsync(running);
         var result = await coordinator.CompensateAsync(processId, [step], saga);
 
         result.IsSuccess.Should().BeTrue();
@@ -1052,10 +1049,9 @@ public class ProcessCoordinatorTests
 
         var instance = ProcessInstance<OrderState>.Create(
             processId, saga.Type, saga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var running = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
-        await store.InnerStore.SaveAsync(running);
-
         var step = new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow);
+        var running = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
+        await store.InnerStore.SaveAsync(running);
         var result = await coordinator.CompensateAsync(processId, [step], saga);
 
         result.IsSuccess.Should().BeTrue();
@@ -1066,7 +1062,7 @@ public class ProcessCoordinatorTests
         var failProcessId = ProcessId.NewId();
         var failInstance = ProcessInstance<OrderState>.Create(
             failProcessId, failSaga.Type, failSaga.Version, CorrelationId.NewId(), initialState, DateTimeOffset.UtcNow);
-        var failRunning = failInstance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow);
+        var failRunning = failInstance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { step });
         await store.InnerStore.SaveAsync(failRunning);
 
         var failResult = await coordinator.CompensateAsync(failProcessId, [step], failSaga);
@@ -1183,7 +1179,8 @@ public class ProcessCoordinatorTests
             initialState,
             DateTimeOffset.UtcNow);
 
-        await store.SaveAsync(instance);
+        var runningInstance = instance.Advance(initialState, ProcessStatus.Running, DateTimeOffset.UtcNow, new[] { new CompensationStep("ChargePayment", new { Amount = 100m }, DateTimeOffset.UtcNow) });
+        await store.SaveAsync(runningInstance);
 
         // Simulate concurrency conflicts on subsequent updates
         store.ConcurrencyConflictsToSimulate = 5;

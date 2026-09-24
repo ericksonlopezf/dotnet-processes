@@ -1,5 +1,11 @@
 # ADR-028: Observability and Telemetry Policy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Production monitoring requires distributed tracing (OpenTelemetry / W3C TraceContext) and runtime metrics (latency, state transitions, concurrency conflicts, compensations).
 

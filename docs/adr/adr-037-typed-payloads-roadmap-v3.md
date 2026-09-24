@@ -1,7 +1,10 @@
 # ADR-037: Typed Payloads in ProcessEffect and CompensationStep — Roadmap v3.0
 
 ## Status
-**Accepted (Technical Debt Formally Acknowledged)**
+Accepted (Technical Debt Formally Acknowledged)
+
+## Date
+2026-09-04
 
 ---
 

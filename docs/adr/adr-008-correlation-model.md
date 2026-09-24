@@ -1,5 +1,11 @@
 # ADR-008: Correlation, Causation, and Message Identity Model
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Event-driven workflows must trace cause-and-effect across multiple messages and determine which process instance should handle an incoming event.
 

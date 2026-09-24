@@ -1,5 +1,11 @@
 # ADR-023: SharedKernel and Minimal Dependencies Policy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Third-party dependencies introduce security vulnerabilities, version conflicts, breaking changes across .NET upgrades, and trimming obstacles.
 

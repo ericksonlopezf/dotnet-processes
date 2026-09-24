@@ -27,7 +27,7 @@
 
 ## 2. Invariant Verification
 
-1. **Native AOT & Trimming Invariant**: Zero dynamic code generation (`IL Emit`), zero unannotated reflection, and zero runtime assembly scanning. Passed in `EricksonLopez.Processes.AotTests` and `EricksonLopez.Processes.TrimTests`.
+1. **Native AOT & Trimming Invariant**: Zero dynamic code generation (`IL Emit`), zero unannotated reflection, and zero runtime assembly scanning. Passed in `EricksonLopez.Processes.AotSmokeTest` and `EricksonLopez.Processes.TrimTests`.
 2. **Optimistic Concurrency Control (CAS)**: Atomic updates validated across all 6 relational storage adapters.
 3. **Zero Allocation Hotpaths**: Struct value objects with `ISpanParsable<T>`/`ISpanFormattable` implementations.
 4. **Comprehensive Test Quality**: 100% Line, Branch, and Method coverage with 100.00% Stryker mutation testing score across all units.

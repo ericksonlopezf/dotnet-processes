@@ -8,7 +8,6 @@ using Xunit;
 
 namespace EricksonLopez.Processes.Tests.Identifiers;
 
-#pragma warning disable CA1305 // Specify IFormatProvider
 #pragma warning disable CA1308 // Normalize strings to uppercase
 #pragma warning disable CA1720 // Identifier contains type name
 

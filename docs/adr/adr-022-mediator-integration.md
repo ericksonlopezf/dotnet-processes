@@ -1,5 +1,11 @@
 # ADR-022: Mediator Ecosystem Integration
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 When a process issues commands (e.g. `ProcessEffect.Command(new ChargePaymentCommand(...))`), those commands may need in-process dispatch via `EricksonLopez.Mediator`.
 

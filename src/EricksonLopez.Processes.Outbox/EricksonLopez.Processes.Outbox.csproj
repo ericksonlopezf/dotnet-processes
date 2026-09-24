@@ -5,7 +5,7 @@
     
     <Title>EricksonLopez.Processes.Outbox</Title>
     <Description>Outbox pattern integration for EricksonLopez.Processes. Dispatches process effects reliably using transactional outbox storage.</Description>
-    <PackageTags>$(CommonPackageTags);outbox-pattern;transactional-outbox;event-driven;reliable-messaging;distributed-systems;native-aot;trimming</PackageTags>
+    <PackageTags>$(CommonPackageTags);outbox;transactional-outbox;event-driven;reliable-messaging;distributed-systems;native-aot;trimming</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,5 +1,11 @@
 # ADR-015: Scheduling Boundary
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Delayed workflows (e.g. "Send reminder after 7 days", "Run weekly billing checkpoint") require scheduled wake-ups.
 

@@ -41,7 +41,7 @@ public sealed class OracleFixture : IAsyncLifetime
                     UPDATED_AT VARCHAR2(35) NOT NULL,
                     COMPLETED_AT VARCHAR2(35) NULL
                 )';
-                EXECUTE IMMEDIATE 'CREATE INDEX IDX_PI_CORR_ID ON PROCESS_INSTANCES (CORRELATION_ID)';
+                EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX IDX_PI_CORR_ID ON PROCESS_INSTANCES(CORRELATION_ID)';
             EXCEPTION
                 WHEN OTHERS THEN
                     IF SQLCODE != -955 THEN

@@ -152,11 +152,11 @@ Migration logic should be unit-tested with known input/output fixtures before de
 ### Use `FaultInjectingProcessStore` for Resilience Tests
 
 ```csharp
-var store = new FaultInjectingProcessStore<MyState>(
-    innerStore: new InMemoryProcessStore<MyState>(),
-    injectSaveFailureAfterNthCall: 2);
-
-// Coordinator will retry — test that it recovers correctly
+var innerStore = new InMemoryProcessStore<MyState>();
+var store = new FaultInjectingProcessStore<MyState>(innerStore)
+{
+    ConcurrencyConflictsToSimulate = 2 // The coordinator will retry and resolve the conflict
+};
 ```
 
 ---

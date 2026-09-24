@@ -32,14 +32,14 @@ public class ProcessCoordinatorOptionsTests
     }
 
     [Theory]
-    [InlineData(1, 10)]
-    [InlineData(2, 20)]
-    [InlineData(3, 30)]
-    [InlineData(5, 50)]
-    public void DefaultBackoffStrategy_ShouldReturnExpectedLinearDelay(int attempt, int expectedMilliseconds)
+    [InlineData(1, 100)]
+    [InlineData(2, 200)]
+    [InlineData(3, 400)]
+    [InlineData(5, 1000)]
+    public void DefaultBackoffStrategy_ShouldReturnExpectedExponentialDelayWithJitter(int attempt, int expectedMilliseconds)
     {
         var delay = ProcessCoordinator<object>.DefaultBackoffStrategy(attempt);
-        delay.Should().Be(TimeSpan.FromMilliseconds(expectedMilliseconds));
+        delay.TotalMilliseconds.Should().BeInRange(expectedMilliseconds, expectedMilliseconds + 50);
     }
 
     [Fact]

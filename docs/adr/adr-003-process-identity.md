@@ -1,5 +1,11 @@
 # ADR-003: Process Identity Representation
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Process instances require unique, persistent, and indexable identifiers across databases and distributed logs.
 

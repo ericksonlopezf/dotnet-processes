@@ -1,5 +1,11 @@
 # ADR-021: Events Ecosystem Integration
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 In the `EricksonLopez.*` ecosystem, domain and integration events are defined with rich metadata and contracts by `EricksonLopez.Events`.
 

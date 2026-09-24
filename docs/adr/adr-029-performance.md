@@ -1,5 +1,11 @@
 # ADR-029: Performance, Memory Allocation, and Data Structures Policy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 High-volume distributed systems process thousands of domain events per second. The process manager library must not introduce heap churn, garbage collection pauses, or CPU overhead.
 

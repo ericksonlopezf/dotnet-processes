@@ -1,5 +1,11 @@
 # ADR-009: Persistence Boundary and Storage Contracts
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Process instances must survive application crashes, container restarts, and machine failovers. They must be persisted to durable storage (e.g. PostgreSQL, SQL Server, DynamoDB, MongoDB, Redis).
 

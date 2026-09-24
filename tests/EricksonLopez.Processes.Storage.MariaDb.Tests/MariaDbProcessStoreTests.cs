@@ -371,7 +371,7 @@ public sealed class MariaDbProcessStoreTests : IClassFixture<MariaDbFixture>
                     created_at VARCHAR(35) NOT NULL,
                     updated_at VARCHAR(35) NOT NULL,
                     completed_at VARCHAR(35) NULL,
-                    INDEX idx_{customTable}_correlation_id (correlation_id)
+                    UNIQUE INDEX idx_{customTable}_correlation_id (correlation_id)
                 );
                 """;
             await using var cmd = new MySqlCommand(ddl, conn);

@@ -22,7 +22,7 @@ High-performance, trimming-safe, and Native AOT-ready Process Manager and Saga o
 - [Key Features](#-key-features)
 - [Ecosystem](#-ecosystem)
 - [Documentation](#-documentation)
-  - [Interactive Showcase (Levels 00 to 03)](#-interactive-showcase-levels-00-to-03)
+  - [Step-by-Step Interactive Showcase (Levels 00 to 10)](#-step-by-step-interactive-showcase-levels-00-to-10)
   - [Technical Reference & Architecture Guides](#-technical-reference--architecture-guides)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
@@ -45,6 +45,7 @@ High-performance, trimming-safe, and Native AOT-ready Process Manager and Saga o
   - [OpenTelemetry Tracing & Metrics](#opentelemetry-tracing--metrics)
   - [Native AOT System.Text.Json Serialization](#native-aot-systemtextjson-serialization)
   - [Roslyn Diagnostic Analyzers](#roslyn-diagnostic-analyzers)
+  - [Advanced API Reference](#advanced-api-reference)
 - [Testing & Quality](#-testing--quality)
   - [In-Memory State Store Testing](#in-memory-state-store-testing)
   - [OCC Concurrency Conflict Simulation](#occ-concurrency-conflict-simulation)
@@ -83,7 +84,7 @@ Building stateful workflows, distributed sagas, and multi-step business coordina
 ### How `EricksonLopez.Processes` Solves This
 
 - **Persist State, Never the Runtime**: Workflows do not stay resident in memory. Upon an incoming event trigger, the instance state hydrates from durable storage, applies pure deterministic transitions, persists state via atomic CAS tokens (`Revision`), emits outbound intent effects (commands/events), and suspends or completes.
-- **Lock-Free Optimistic Concurrency Control (OCC CAS)**: State transitions use atomic monotonic `Revision` tokens with automatic linear/exponential backoff retry loops, achieving sub-microsecond state transitions under high concurrency without database locks.
+- **Lock-Free Optimistic Concurrency Control (OCC CAS)**: State transitions use atomic monotonic `Revision` tokens with automatic linear/exponential backoff retry loops, achieving sub-microsecond state transitions in the in-memory coordination path (without network I/O) under high concurrency without database locks.
 - **First-Class Reverse-Order Compensation (LIFO)**: Compensating actions are recorded alongside forward steps with immutable payloads and dispatched sequentially in reverse order (`Compensating` -> `Compensated` or `Failed`).
 - **100% Native AOT & Trimming Compliance**: Zero runtime reflection. Roslyn Incremental Source Generators register process definitions and build DI tables at compile time, accompanied by Roslyn Analyzers enforcing transition correctness.
 - **Pure Domain Isolation (Clean Architecture)**: The core domain and abstractions have **zero external dependencies**. Workflows produce pure side-effect intents (`ProcessEffect.Command`, `ProcessEffect.Event`, `ProcessEffect.Timeout`), leaving network transport and broker dispatching to dedicated perimeter adapters.
@@ -131,31 +132,45 @@ Building stateful workflows, distributed sagas, and multi-step business coordina
 
 > 🌐 **Official Documentation Hub:** [https://github.com/ericksonlopezf/dotnet-processes/tree/main/docs](https://github.com/ericksonlopezf/dotnet-processes/tree/main/docs)
 
-### 🎓 Interactive Showcase (Levels 00 to 03)
+### 🎓 Step-by-Step Interactive Showcase (Levels 00 to 10)
+
+> 💡 **Master Showcase Guide:** Explore the complete interactive curriculum and reference implementation in [Showcase Curriculum Hub](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/index.md).
 
 | Level | Topic | Description |
 |---|---|---|
-| [**Level 00**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-00-introduction.md) | **Introduction & Architecture** | Core philosophy, execution model, and zero-reflection foundations. |
-| [**Level 01**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-01-state-machine-and-saga.md) | **State Machines & Sagas** | Modeling multi-step workflows, transitions, and LIFO compensation. |
-| [**Level 02**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-02-storage-and-durability.md) | **Storage & Durability** | Persistent stores, optimistic concurrency control (OCC), and revision tokens. |
-| [**Level 03**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-03-zero-allocation-aot.md) | **Zero-Allocation & Native AOT** | Performance benchmarks, span parsing, and source generator setup. |
+| [**Level 00**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-00-conceptual.md) | **Conceptual Foundations** | Core philosophy, execution model, state persistence vs runtime locks, and alternatives comparison. |
+| [**Level 01**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-01-quickstart.md) | **Quick Start** | Minimal setup, dependency injection, and first executing process. |
+| [**Level 02**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-02-full-configuration.md) | **Full Configuration** | Options, builders, extension methods, logging, serialization, and value objects. |
+| [**Level 03**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-03-real-world-use-cases.md) | **Real-World Use Cases** | Distributed sagas, multi-step coordination, and LIFO compensation. |
+| [**Level 04**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-04-advanced-integration.md) | **Advanced Integration** | Reliable side-effects with Outbox, Mediator, and Event Bus dispatchers. |
+| [**Level 05**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-05-processing-and-concurrency.md) | **Processing & Concurrency** | Optimistic concurrency control (OCC CAS), linear/exponential backoff, and timeouts. |
+| [**Level 06**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-06-error-handling-and-recovery.md) | **Error Handling & Recovery** | Transient vs permanent errors, dead-letter patterns, and compensation escalation. |
+| [**Level 07**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-07-scalability-and-performance.md) | **Scalability & Performance** | Multi-instance scale-out, zero-allocation span parsing, and OpenTelemetry observability. |
+| [**Level 08**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-08-customization.md) | **Customization** | Custom store implementations, custom serializers, and snapshot repositories. |
+| [**Level 09**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-09-extensions-and-storage.md) | **Extensions & Storage** | Persistence adapters for 6 RDBMS engines (PostgreSQL, SQL Server, SQLite, MySQL, MariaDB, Oracle). |
+| [**Level 10**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/showcase/level-10-enterprise-architecture.md) | **Enterprise Architecture** | Clean Architecture boundaries, zero-downtime schema evolution, and Roslyn source generation. |
 
 ### 📖 Technical Reference & Architecture Guides
 
+- [**Public API Inventory**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/audit/public-api-inventory.md) — Exhaustive inventory of all public classes, records, interfaces, enums, structs, and extension methods.
 - [**Architecture & Diagrams**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/architecture/architecture-and-diagrams.md) — Visual reference for package boundaries, OCC loops, FSM lifecycles, and telemetry flow.
 - [**Architecture Overview**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/architecture/overview.md) — System overview, coordinator lifecycle, and state hydration patterns.
 - [**State Machine Lifecycle**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/architecture/state-machine.md) — Formal transition semantics and terminal state guarantees.
 - [**API Reference**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/api-reference.md) — Exhaustive technical specification for all public types, records, and interfaces.
 - [**Cookbook & Recipes**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/cookbook.md) — Production-tested recipes for PostgreSQL, Outbox, composite keys, and Native AOT.
+- [**Quick Start Guide**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/quick-start.md) — Rapid 5-minute onboarding guide to defining and executing your first process.
 - [**Building Sagas Guide**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/building-sagas.md) — Comprehensive guide to distributed saga orchestration and compensation modeling.
 - [**PostgreSQL + Dapper Store**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/postgresql-dapper-store.md) — Setup and schema guidelines for PostgreSQL persistence.
+- [**Outbox & EventBus Integration**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/outbox-eventbus-integration.md) — Deep dive into dispatching side effects reliably via Outbox and EventBus.
 - [**Performance Guide**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/performance-guide.md) — Zero-allocation techniques, span formatting, and benchmark throughput analysis.
+- [**Benchmark Results**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/benchmarks/results.md) — Official BenchmarkDotNet performance metrics, allocation analysis, and hardware specifications.
 - [**State Migration Guide**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/migration-guide.md) — Zero-downtime schema evolution using `ProcessStateMigrationPipeline`.
 - [**Troubleshooting Guide**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/troubleshooting.md) — Common errors, concurrency conflict resolution, and diagnostic steps.
+- [**FAQ**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/faq.md) — Frequently asked questions regarding architecture, concurrency, and serialization.
 - [**Best Practices & Guidelines**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/guides/best-practices.md) — Immutable state design, pure transitions, and saga rollback rules.
 - [**Feature Matrix & Decisions**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/feature-matrix.md) — Detailed 55-feature evaluation, capabilities, and design decisions.
 - [**CI/CD & Quality Gates**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/ci-cd.md) — GitHub Actions pipelines, Stryker mutation gates, and Native AOT smoke testing.
-- [**Architectural Decision Records (ADRs)**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/adr/index.md) — Index of 40 formal ADRs documenting all system design choices.
+- [**Architectural Decision Records (ADRs)**](https://github.com/ericksonlopezf/dotnet-processes/tree/main/docs/adr) — Index of 41 formal ADRs documenting all system design choices.
 - [**Competitor Analysis**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/concepts/competitor-analysis.md) — In-depth architectural comparison vs MassTransit, Elsa, Temporal, and Dapr.
 - [**Boundary Specification**](https://github.com/ericksonlopezf/dotnet-processes/blob/main/BOUNDARY.md) — Zero-dependency invariants for `EricksonLopez.Processes.Abstractions`.
 
@@ -368,11 +383,17 @@ using EricksonLopez.Processes;
 using EricksonLopez.Processes.Abstractions;
 using EricksonLopez.Processes.Testing;
 
-// 1. Define correlation strategy for the initiating event
+// 1. Define correlation strategies for incoming events
 public sealed class OrderPlacedCorrelation : IProcessCorrelation<OrderPlacedEvent>
 {
     public ProcessId ExtractProcessId(OrderPlacedEvent @event) => ProcessId.From(@event.OrderId);
     public CorrelationId ExtractCorrelationId(OrderPlacedEvent @event) => CorrelationId.From(@event.OrderId.ToString());
+}
+
+public sealed class PaymentAuthorizedCorrelation : IProcessCorrelation<PaymentAuthorizedEvent>
+{
+    public ProcessId ExtractProcessId(PaymentAuthorizedEvent @event) => ProcessId.From(@event.OrderId);
+    public CorrelationId ExtractCorrelationId(PaymentAuthorizedEvent @event) => CorrelationId.From(@event.OrderId.ToString());
 }
 
 // 2. Initialize store and coordinator with custom OCC options
@@ -400,20 +421,29 @@ Console.WriteLine($"Status: {result.Instance.Status}"); // Running
 Console.WriteLine($"Emitted Effects: {result.Effects.Count}"); // 1 (CapturePaymentCommand)
 ```
 
+> [!TIP]
+> **Idempotent Terminal State Handling**: When `ProcessCoordinator.ExecuteAsync` or `CompensateAsync` processes a message correlated with an instance already in a terminal state (`ProcessStatus.Completed`, `ProcessStatus.Failed`, or `ProcessStatus.Compensated`), the coordinator performs an idempotent no-op. It safely bypasses handler invocation and returns the current instance directly with `ProcessSaveResult.Success` and empty side effects, shielding distributed workflows against duplicate or late-arriving events.
+
 ### 4. Zero-Boilerplate DI Registration via Source Generator
 
 Leverage `EricksonLopez.Processes.Generator` to emit compile-time service registrations without runtime reflection.
 
 ```csharp
 // Program.cs
+using EricksonLopez.Processes.Abstractions;
 using EricksonLopez.Processes.DependencyInjection;
 using EricksonLopez.Processes.Generated;
 using EricksonLopez.Processes.Storage.PostgreSql;
+using EricksonLopez.Processes.SystemTextJson;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Compile-time auto-generated discovery of all [SagaDefinition] / [ProcessDefinition] classes
 builder.Services.AddGeneratedProcesses();
+
+// Register state serializer (Native AOT source-generated)
+builder.Services.AddSingleton<IProcessStateSerializer<OrderSagaState>>(
+    new SystemTextJsonProcessStateSerializer<OrderSagaState>(AppJsonSerializerContext.Default.OrderSagaState));
 
 // Register coordinator and PostgreSQL persistence adapter
 builder.Services
@@ -545,7 +575,7 @@ public sealed record UserOnboardingState(
 
 [ProcessDefinition("customer.onboarding", 1)]
 public sealed class UserOnboardingProcess :
-    IProcessDefinition<UserOnboardingState>,
+    IProcess<UserOnboardingState>,
     IProcessHandler<UserOnboardingState, EmailVerifiedEvent>,
     IProcessHandler<UserOnboardingState, KycApprovedEvent>
 {
@@ -631,24 +661,23 @@ public sealed class OrderSagaEndpoint
 Ensure completed milestone steps are undone in strict reverse chronological sequence during partial distributed failures.
 
 ```csharp
-// The SagaCompensationEngine handles automated LIFO unwinding
-var compensationEngine = new SagaCompensationEngine();
+// The ProcessCoordinator<TState> handles automated LIFO compensation unwinding.
+// Compensation steps are recorded during forward execution via ProcessEffect.Compensation
+// and stored inside the persisted ProcessInstance. The coordinator reads them automatically.
 
-var recordedMilestones = new List<CompensationAction>
-{
-    new("Step1_AuthorizePayment", new { Amount = 500m }),
-    new("Step2_ReserveInventory", new { Sku = "SKU-990", Quantity = 2 }),
-    new("Step3_BookShippingCourier", new { TrackingId = "TRK-001" })
-};
+// Inject or resolve your coordinator
+var coordinator = new ProcessCoordinator<OrderSagaState>(store);
+var saga = new OrderFulfillmentSaga();
 
-// Compensation executes in reverse: Step3 -> Step2 -> Step1
-var compensationResult = await compensationEngine.ExecuteCompensationAsync(
-    handler: mySagaHandler,
-    compensationActions: recordedMilestones,
-    initialState: currentState,
-    context: processContext);
+// Trigger reverse-order LIFO compensation for a known process ID
+// The coordinator reads recorded CompensationStep entries from storage in reverse order.
+var compensationResult = await coordinator.CompensateAsync(
+    processId: orderId,    // The ProcessId of the saga to roll back
+    saga: saga,            // Provides ICompensationHandler<TState> logic
+    cancellationToken: cancellationToken);
 
-Console.WriteLine($"Rollback Outcome: {compensationResult.Status}"); // Compensated
+// Compensation executes recorded steps in reverse: Step3 → Step2 → Step1
+Console.WriteLine($"Rollback Outcome: {compensationResult.Instance.Status}"); // Compensated
 ```
 
 ### Use Case 5: Zero-Downtime State Schema Evolution
@@ -679,9 +708,12 @@ Simulate race conditions, storage crashes, and OCC conflicts in unit test pipeli
 [Fact]
 public async Task Coordinator_ShouldRetryAndSucceed_WhenConcurrencyConflictOccurs()
 {
-    // Arrange: Create fault-injecting store that fails CAS save on first attempt
+    // Arrange: Create fault-injecting store that simulates 1 concurrency conflict, then succeeds
     var innerStore = new InMemoryProcessStore<OrderSagaState>();
-    var faultStore = new FaultInjectingProcessStore<OrderSagaState>(innerStore, injectSaveFailureAfterNthCall: 1);
+    var faultStore = new FaultInjectingProcessStore<OrderSagaState>(innerStore)
+    {
+        ConcurrencyConflictsToSimulate = 1
+    };
 
     var options = new ProcessCoordinatorOptions { MaxConcurrencyRetries = 3 };
     var coordinator = new ProcessCoordinator<OrderSagaState>(faultStore, options);
@@ -697,7 +729,7 @@ public async Task Coordinator_ShouldRetryAndSucceed_WhenConcurrencyConflictOccur
 
     // Assert
     Assert.Equal(ProcessStatus.Running, result.Instance.Status);
-    Assert.Equal(Revision.From(1), result.Instance.Revision);
+    Assert.Equal(Revision.From(2), result.Instance.Revision);
 }
 ```
 
@@ -719,7 +751,10 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Source Generator compile-time registry
 builder.Services.AddGeneratedProcesses();
 
-// 2. Core framework services & coordinator
+// 2. Core framework services, state serializer & coordinator
+builder.Services.AddSingleton<IProcessStateSerializer<OrderSagaState>>(
+    new SystemTextJsonProcessStateSerializer<OrderSagaState>(AppJsonSerializerContext.Default.OrderSagaState));
+
 builder.Services
     .AddProcesses()
     .AddProcessCoordinator<OrderSagaState>(options =>
@@ -739,6 +774,10 @@ builder.Services.AddPostgreSqlProcessStore<OrderSagaState>(
 `EricksonLopez.Processes` provides official, zero-allocation persistent storage adapters across all major relational databases:
 
 ```csharp
+// Required: Register state serializer for the state type
+services.AddSingleton<IProcessStateSerializer<MyState>>(
+    new SystemTextJsonProcessStateSerializer<MyState>(AppJsonSerializerContext.Default.MyState));
+
 // PostgreSQL (JSONB column, parameterized queries)
 services.AddPostgreSqlProcessStore<MyState>(connectionString, tableName: "process_instances");
 
@@ -762,10 +801,10 @@ Route emitted side-effect intents to your preferred messaging infrastructure:
 
 ```csharp
 // 1. In-process Mediator integration (EricksonLopez.Mediator)
-services.AddProcessMediatorDispatcher();
+services.AddProcessesMediator();
 
 // 2. Transactional Outbox integration (EricksonLopez.Outbox)
-services.AddProcessOutboxDispatcher();
+services.AddProcessesOutbox();
 
 // 3. Domain Event publishing integration (EricksonLopez.Events)
 services.AddProcessEventsDispatcher();
@@ -792,10 +831,12 @@ builder.Services.AddOpenTelemetry()
 
 | Metric Name | Instrument | Unit | Description |
 |---|---|---|---|
-| `process.executions.total` | Counter | `{executions}` | Total count of `ExecuteAsync` coordinator invocations |
-| `process.occ.retries` | Counter | `{retries}` | Total OCC concurrency conflicts retried |
-| `process.effects.emitted` | Counter | `{effects}` | Total side-effect intents (commands/events) emitted |
-| `process.execution.duration` | Histogram | `ms` | End-to-end latency of coordinator execution cycles |
+| `processes.started` | Counter | `count` | Total count of started process instances |
+| `processes.completed` | Counter | `count` | Total count of successfully completed processes |
+| `processes.failed` | Counter | `count` | Total count of processes that entered failed state |
+| `processes.compensated` | Counter | `count` | Total count of successfully compensated sagas |
+| `processes.concurrency_conflicts` | Counter | `count` | Total optimistic concurrency (OCC) conflicts encountered |
+| `processes.transition.duration` | Histogram | `ms` | Latency distribution of process state transitions |
 
 ### Native AOT System.Text.Json Serialization
 
@@ -824,7 +865,53 @@ Compile-time rules enforce strict state machine completeness and saga invariants
 | Diagnostic ID | Severity | Category | Description | Code Fix |
 |---|---|---|---|---|
 | **`PROC001`** | Warning | Design | Process definition missing initial state transition handler. | Add `IProcessHandler<TState, TInitialEvent>` implementation. |
-| **`PROC002`** | Info | Reliability | Saga step transition defines an outbound effect without a registered compensation action. | Record `CompensationStep` in `ProcessTransitionResult.Advance(...)`. |
+| **`PROC002`** | Info | Reliability | Saga definition missing compensation logic. | Implement `ICompensationHandler<TState>` or declare compensation method. |
+
+---
+
+### Advanced API Reference
+
+#### Source Generator Attributes
+
+The following attributes are discovered by the `EricksonLopez.Processes.Generator` source generator at compile time. They drive the `AddGeneratedProcesses()` DI extension. All attributes are in the `EricksonLopez.Processes.Abstractions` namespace.
+
+| Attribute | Target | Description |
+|---|---|---|
+| `[ProcessDefinition(string type, int version = 1)]` | Class | Marks a class as a process manager definition. Generator discovers and registers it. |
+| `[SagaDefinition(string type, int version = 1)]` | Class | Marks a class as a saga definition with compensation support. Generator discovers and registers it. |
+| `[ProcessHandler(bool canInitiate = false)]` | Method | Documents that a method handles a specific event. `canInitiate = true` allows the event to create a new process instance. |
+| `[ProcessType(string processType)]` | Class / Struct | Declares the logical process type identifier for a state or definition class. |
+
+#### Snapshot Repository (Advanced — Optional)
+
+`ISagaSnapshotRepository<TState>` is an advanced optional interface for implementations that support periodic state checkpointing, reducing the number of event replays required during recovery:
+
+```csharp
+public class MySnapshotRepository<TState> : ISagaSnapshotRepository<TState>
+    where TState : notnull
+{
+    public ValueTask SaveSnapshotAsync(
+        ProcessId processId, Revision revision, TState state,
+        CancellationToken cancellationToken = default)
+    { /* persist snapshot */ }
+
+    public ValueTask<(Revision Revision, TState State)?> GetLatestSnapshotAsync(
+        ProcessId processId, CancellationToken cancellationToken = default)
+    { /* retrieve latest checkpoint */ }
+}
+```
+
+#### ProcessExecutionResult Convenience Members
+
+`ProcessExecutionResult<TState>` exposes the following properties for inspecting the coordinator outcome:
+
+| Property | Type | Description |
+|---|---|---|
+| `Instance` | `ProcessInstance<TState>` | The persisted process instance after the transition, with updated `Status` and `Revision`. |
+| `Effects` | `IReadOnlyList<ProcessEffect>` | Side-effect intents emitted by the transition (commands, events, timeouts). |
+| `SaveResult` | `ProcessSaveResult` | Persistence outcome: `Success`, `ConcurrencyConflict`, `NotFound`, or `PersistenceError`. |
+| `RecordedCompensations` | `IReadOnlyList<CompensationStep>` | All compensation steps recorded on the instance at the time of this execution. |
+| `IsSuccess` | `bool` | Convenience check: `true` when `SaveResult == ProcessSaveResult.Success`. |
 
 ---
 
@@ -853,7 +940,7 @@ public async Task Saga_ShouldAdvanceToCompleted_WhenAllEventsProcessed()
 
     // Act 2: Payment authorization
     var paymentResult = await coordinator.ExecuteAsync(
-        saga, new OrderPlacedCorrelation(),
+        saga, new PaymentAuthorizedCorrelation(),
         new PaymentAuthorizedEvent(orderId),
         canInitiate: false);
 
@@ -872,9 +959,10 @@ Test your system's resilience under race conditions using `FaultInjectingProcess
 public async Task Coordinator_ShouldExhaustRetries_WhenStoreConsistentlyFails()
 {
     var innerStore = new InMemoryProcessStore<OrderSagaState>();
-    var faultStore = new FaultInjectingProcessStore<OrderSagaState>(
-        innerStore,
-        injectSaveFailureAfterNthCall: 0); // Always fail CAS save
+    var faultStore = new FaultInjectingProcessStore<OrderSagaState>(innerStore)
+    {
+        ForcedSaveResult = ProcessSaveResult.ConcurrencyConflict // Always fail CAS save
+    };
 
     var options = new ProcessCoordinatorOptions { MaxConcurrencyRetries = 2 };
     var coordinator = new ProcessCoordinator<OrderSagaState>(faultStore, options);
@@ -915,6 +1003,8 @@ public async Task Coordinator_ShouldExhaustRetries_WhenStoreConsistentlyFails()
 | **OVERALL ECOSYSTEM** | **100.00%** | — | **✅ HIGH** |
 <!-- STRYKER_RESULTS_END -->
 
+> **Note**: The `Mutants Killed / Total` column is populated automatically by the CI/CD pipeline on each release build via `dotnet stryker`. The table above reflects the configured quality gate target (≥ 98% per package). Run `dotnet stryker --config-file stryker-config.json` locally to obtain the current live counts.
+
 ```bash
 # Run mutation testing on the core coordinator engine
 dotnet stryker --config-file stryker-config.json
@@ -927,7 +1017,9 @@ dotnet stryker --config-file stryker-abstractions-config.json
 
 ## ⚡ Performance Benchmarks
 
-> **Environment:** .NET 10.0.0 (10.0.100), X64 RyuJIT AVX2, BenchmarkDotNet v0.14.0, Native AOT / Trimming Enabled
+> **Environment:** .NET 10.0.0 (10.0.100), X64 RyuJIT AVX2, BenchmarkDotNet v0.15.8, Native AOT / Trimming Enabled
+
+> 📊 **Official Benchmark Report:** For comprehensive telemetry, test harness details, and hardware configuration, see the [Benchmark Results Documentation](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/benchmarks/results.md).
 
 ### Execution Latency & Allocation Summary
 
@@ -953,17 +1045,19 @@ dotnet stryker --config-file stryker-abstractions-config.json
 
 | Package | .NET 8.0 LTS | .NET 9.0 STS | .NET 10.0 | Native AOT | Trimmable | Target TFM |
 |---|:---:|:---:|:---:|:---:|:---:|---|
-| `EricksonLopez.Processes.Abstractions` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0`, `netstandard2.0` |
-| `EricksonLopez.Processes` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.Generator` | ✅ | ✅ | ✅ | ✅ | ✅ | `netstandard2.0` |
-| `EricksonLopez.Processes.Analyzers` | ✅ | ✅ | ✅ | ✅ | ✅ | `netstandard2.0` |
-| `EricksonLopez.Processes.DependencyInjection` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.SystemTextJson` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.Events` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.Mediator` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.Outbox` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.Storage.*` (All 6) | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
-| `EricksonLopez.Processes.Testing` | ✅ | ✅ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Abstractions` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Generator` | ✅ | ✅ | ✅ | N/A | N/A | `netstandard2.0` |
+| `EricksonLopez.Processes.Analyzers` | ✅ | ✅ | ✅ | N/A | N/A | `netstandard2.0` |
+| `EricksonLopez.Processes.DependencyInjection` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.SystemTextJson` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Events` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Mediator` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Outbox` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Storage.*` (All 6) | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+| `EricksonLopez.Processes.Testing` | ❌ | ❌ | ✅ | ✅ | ✅ | `net10.0` |
+
+> 🛡️ **Target Framework & Lifecycle Policy**: All runtime packages exclusively target `.NET 10.0` — the current LTS release — to leverage modern BCL primitives (`TimeProvider`, `ReadOnlySpan<T>`, enhanced Native AOT compiler diagnostics) and maintain zero-polyfill runtime assembly design (see [ADR-025](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/adr/adr-025-target-frameworks.md)). The Roslyn tooling packages (`Generator`, `Analyzers`) target `.NET Standard 2.0` to remain compatible with the Roslyn compiler host across all IDE versions. `.NET 8` and `.NET 9` runtime targets are not supported.
 
 ### Ecosystem Responsibility Matrix
 
@@ -1012,7 +1106,7 @@ dotnet stryker --config-file stryker-abstractions-config.json
 │  DOMAIN LAYER (EricksonLopez.Processes)                                │
 │  ┌──────────────────────────┐    ┌───────────────────────────────────┐ │
 │  │ ProcessCoordinator<T>    │    │ ISaga<TState>                     │ │
-│  │ SagaCompensationEngine   │    │ IProcessHandler<TState, TEvent>   │ │
+│  │ (+ internal LIFO runner) │    │ IProcessHandler<TState, TEvent>   │ │
 │  │ ProcessTransitionResult  │    │ ICompensationHandler<TState>      │ │
 │  └──────────────┬───────────┘    └───────────────────────────────────┘ │
 │                 │                                                      │
@@ -1030,20 +1124,20 @@ The following sequence diagram models the lock-free state hydration, pure transi
 ```mermaid
 sequenceDiagram
     participant Host
-    participant Coordinator as ProcessCoordinator&lt;TState&gt;
-    participant Store as IProcessStore&lt;TState&gt;
-    participant Handler as IProcessHandler&lt;TState,TEvent&gt;
-    participant Serializer as IProcessStateSerializer
+    participant Coordinator as "ProcessCoordinator<TState>"
+    participant Store as "IProcessStore<TState>"
+    participant Handler as "IProcessHandler<TState, TEvent>"
+    participant Serializer as "IProcessStateSerializer"
 
     Host->>Coordinator: ExecuteAsync(handler, correlation, event)
     loop OCC CAS Retry Loop (up to MaxConcurrencyRetries)
         Coordinator->>Store: LoadByCorrelationIdAsync(correlationId, processType)
         Store-->>Coordinator: ProcessStateRecord? (null if new)
-        Coordinator->>Serializer: Deserialize&lt;TState&gt;(StateJson)
+        Coordinator->>Serializer: Deserialize(StateJson)
         Serializer-->>Coordinator: TState (hydrated)
         Coordinator->>Handler: HandleAsync(state, event, context)
-        Handler-->>Coordinator: ProcessTransitionResult&lt;TState&gt;
-        Coordinator->>Serializer: Serialize&lt;TState&gt;(newState)
+        Handler-->>Coordinator: ProcessTransitionResult<TState>
+        Coordinator->>Serializer: Serialize(newState)
         Serializer-->>Coordinator: StateJson
         Coordinator->>Store: SaveAsync(ProcessStateRecord with Revision + 1)
         alt CAS Save Succeeded (Revision matched)
@@ -1139,6 +1233,31 @@ stateDiagram-v2
 - **Symptom**: Saga compensation enters `Failed` state with message `Unknown compensation step`.
 - **Root Cause**: `CompensateAsync` does not have a pattern match arm for a recorded `StepName`.
 - **Remediation**: Ensure your `switch` expression inside `CompensateAsync` exhaustively handles every `StepName` registered during forward execution.
+
+### 5. Handling `ProcessStatus.Failed` After Compensation
+
+- **Symptom**: `coordinator.CompensateAsync(...)` returns a result with `result.Instance.Status == ProcessStatus.Failed` instead of `Compensated`.
+- **Root Cause**: A compensation step either explicitly returned `ProcessStatus.Failed` or threw an unexpected exception. The coordinator durably persists the `Failed` state rather than throwing to preserve the atomic audit trail.
+- **Design Note** (see [ADR-041](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/adr/adr-041-exception-taxonomy-vs-result-model.md)): `CompensateAsync` does **not** throw `CompensationFailedException`. It always returns a `ProcessExecutionResult<TState>`. Inspect `result.Instance.Status` to determine the outcome.
+- **Remediation for DLQ routing**: If your host requires an exception to route failed sagas to dead-letter queues, throw `CompensationFailedException` **after** inspecting the result:
+  ```csharp
+  var result = await coordinator.CompensateAsync(processId, saga, ct);
+  if (result.Instance.Status == ProcessStatus.Failed)
+  {
+      throw new CompensationFailedException(
+          processId,
+          stepName: "UnknownStep",
+          reason: "Saga compensation reached Failed terminal state.",
+          innerException: null);
+  }
+  ```
+
+### 6. `InvalidProcessTransitionException` in Custom Store Implementations
+
+- **Symptom**: `InvalidProcessTransitionException` is thrown when saving an instance.
+- **Root Cause**: A custom `IProcessStore<TState>` implementation enforces state machine transition guards and rejected an invalid transition (e.g., attempting to transition from `Completed` to `Running`).
+- **Properties**: `InvalidProcessTransitionException.CurrentStatus` and `InvalidProcessTransitionException.AttemptedStatus` identify the conflicting states.
+- **Remediation**: Ensure handlers check `instance.Status` before returning a new status. Terminal states (`Completed`, `Compensated`, `Failed`) reject further execution — the coordinator already silently returns early for these (`shouldExitEarly` guard in `ResolveInstanceAsync`).
 
 ---
 

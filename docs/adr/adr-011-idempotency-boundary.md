@@ -1,5 +1,11 @@
 # ADR-011: Idempotency Boundary
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 At-least-once message delivery in brokers (Kafka, RabbitMQ, SQS, Azure Service Bus) inevitably causes duplicate message delivery.
 

@@ -1,5 +1,11 @@
 # ADR-012: Explicit Compensation Model and Lifecycle
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 When a distributed saga step encounters an unrecoverable failure (e.g. `ShipmentCreationFailed` after `PaymentCompleted` and `InventoryReserved`), previously completed steps must be compensated (e.g. `RefundPayment`, `ReleaseInventory`).
 

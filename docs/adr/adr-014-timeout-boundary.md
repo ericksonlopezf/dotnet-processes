@@ -1,5 +1,11 @@
 # ADR-014: Timeout and Expiration Modeling
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Processes such as electronic invoice certification or customer onboarding often require expiration deadlines (e.g. "Wait up to 48 hours for certification; if no response, expire the invoice").
 

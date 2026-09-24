@@ -35,7 +35,7 @@ Alternatively, ensure single-partition consumer assignment per `CorrelationId` a
 
 **Symptom**: `ProcessNotFoundException` is thrown.
 
-**Root Cause**: `LoadByCorrelationIdAsync` returned `null` and `canInitiate: false` was passed to `ExecuteAsync`.
+**Root Cause**: `GetByIdAsync` returned `null` and `canInitiate: false` was passed to `ExecuteAsync`.
 
 **Resolution**:
 
@@ -159,6 +159,28 @@ public sealed record MyState(
 
 ---
 
+## Error: State Payload Size Exceeds Configured Limit
+
+**Symptom**: `System.InvalidOperationException: Serialized state payload size (X bytes) exceeds the configured maximum allowed size of Y bytes` or `Incoming state payload size (X bytes) exceeds the configured maximum allowed size of Y bytes`.
+
+**Root Cause**: The process state payload has grown larger than the configured `maxPayloadSizeBytes` on `SystemTextJsonProcessStateSerializer<TState>`, or the default/configured limit was reached due to accumulating unbounded event collections inside the state record.
+
+**Diagnostic Steps**:
+1. Check the properties of the state record (`TState`). Identify collections, arrays, or large text strings being appended to state transitions.
+2. Verify if historical sub-events are improperly stored inside the saga state aggregate instead of relying on external audit/event stores.
+
+**Resolution Option A**: Refactor the state aggregate to store external references (IDs or URI claim checks) rather than inline blobs.
+
+**Resolution Option B**: If the state genuinely requires a larger payload (e.g. complex workflow configuration), increase the `maxPayloadSizeBytes` configuration:
+
+```csharp
+var serializer = new SystemTextJsonProcessStateSerializer<OrderState>(
+    OrderJsonContext.Default.OrderState,
+    maxPayloadSizeBytes: 128 * 1024); // 128 KB
+```
+
+---
+
 ## Diagnostics Checklist
 
 | Symptom | Check |
@@ -170,3 +192,5 @@ public sealed record MyState(
 | AOT publish fails | Use `JsonSerializerContext`; check `IsAotCompatible=true` |
 | Generator method not found | Verify `[SagaDefinition]` / `[ProcessDefinition]` attribute presence |
 | State deserialization error | Check if schema changed; add migrator or `JsonPropertyName` |
+| Payload size limit exceeded | Avoid storing unbounded collections in state; adjust `maxPayloadSizeBytes` |
+

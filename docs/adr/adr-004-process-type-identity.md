@@ -1,5 +1,11 @@
 # ADR-004: Process Type Identity Strategy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Process instances stored in durable databases must be associated with their logical process definition independently of internal .NET CLR namespace, type names, or assembly versions.
 

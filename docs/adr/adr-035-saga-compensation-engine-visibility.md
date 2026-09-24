@@ -1,7 +1,10 @@
 # ADR-035: SagaCompensationEngine Visibility Restriction to Internal
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 
