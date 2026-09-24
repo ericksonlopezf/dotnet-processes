@@ -4,271 +4,185 @@ Comprehensive documentation of the GitHub Actions automation pipelines, quality 
 
 ---
 
-## 1. Workflow Overview
+## 1. Workflow Architecture Overview
 
 ```mermaid
 flowchart TD
     subgraph "On push/PR to main or develop"
-        CI[ci.yml] --> BT[dotnet-build-test.yml\nReusable]
-        CI --> AOT[NativeAOT Publish\nValidation]
+        CI[ci.yml] --> BT[dotnet-build-test.yml\nReusable Build & Test]
+        CI --> AOT[aot-smoke-test.yml\nReusable NativeAOT Smoke Test]
     end
 
-    subgraph "Weekly (Mon 04:00 UTC) + Manual"
-        MUT[mutation-testing.yml\nStryker Matrix]
+    subgraph "PR Quality Gates (src/**, benchmarks/**)"
+        BRG[benchmark-regression-gate.yml\nZero-Alloc & Latency Gate]
     end
 
-    subgraph "On push to main"
-        RP[release-please.yml] -->|releases_created=true| PUB[publish.yml\nworkflow_dispatch]
+    subgraph "Governance & Architecture Guard"
+        RC[repo-compliance.yml\nverify-compliance.ps1]
     end
 
-    subgraph "On v*.*.* tag push (legacy)"
-        TAG[v*.*.* tag] --> PUB
+    subgraph "Weekly Scheduled & On-Demand"
+        MUT[mutation-testing.yml\nStryker Matrix - Mon 04:00 UTC]
+        WBM[weekly-benchmarks.yml\nCross-TFM - Sun 02:00 UTC]
+        BM[benchmarks.yml\nOn-Demand Execution]
     end
 
-    PUB --> SIGN[Sigstore Provenance\nAttestation]
-    PUB --> NUGET[NuGet.org OIDC Push]
-    PUB --> REL[GitHub Release]
+    subgraph "Automated Release Pipeline (main)"
+        RP[release-please.yml\nConventional Commits Release PR] -->|releases_created=true| PUB[publish.yml\nworkflow_dispatch]
+        TAG[v*.*.* Tag Push\nLegacy Manual Support] --> PUB
+    end
+
+    subgraph "Package Attestation & Publishing"
+        PUB --> MUT_CHECK{Stryker Mutation Gate\nverify-mutation-gate.js}
+        MUT_CHECK -->|Pass| PACK[dotnet pack 16 packages]
+        PACK --> SIGN[Sigstore Provenance Attestation\nactions/attest-build-provenance@v2]
+        SIGN --> OIDC[NuGet.org OIDC Login\nNuGet/login@v1]
+        OIDC --> PUSH[dotnet nuget push\n--skip-duplicate]
+        PUSH --> REL[GitHub Release\nsoftprops/action-gh-release@v2]
+    end
 ```
 
 ---
 
-## 2. Workflow Specifications
+## 2. Complete Workflow Inventory & Specifications
 
-### 2.1 Continuous Integration — `ci.yml`
+| # | Pipeline Name | Workflow File | Triggers | Primary Purpose |
+|---|---|---|---|---|
+| 1 | **Continuous Integration** | `ci.yml` | `push`, `pull_request` (`main`, `develop`) | Orchestrates build, tests, coverage, and NativeAOT verification. |
+| 2 | **Reusable Build & Test** | `dotnet-build-test.yml` | `workflow_call` | Restores SNK, executes Release build, Coverlet test coverage, and SonarCloud analysis. |
+| 3 | **NativeAOT Smoke Test** | `aot-smoke-test.yml` | `push`, `pull_request` (`main`, `develop`), `workflow_call`, `workflow_dispatch` | Compiles and executes `NativeAotSample` with `PublishAot=true` on Linux. |
+| 4 | **Benchmark Regression Gate** | `benchmark-regression-gate.yml` | `pull_request` (`main`, `develop` for `src/**`, `benchmarks/**`), `workflow_dispatch` | Enforces zero-allocation hotpath and <= 5% latency regression. |
+| 5 | **Publish NuGet** | `publish.yml` | `workflow_dispatch` (from Release Please), `push` (`v*.*.*` tags) | Packs, attests with Sigstore, authenticates via OIDC, and publishes 16 packages to NuGet.org. |
+| 6 | **Release Please** | `release-please.yml` | `push` (`main`) | Automates Conventional Commits release PRs and triggers `publish.yml`. |
+| 7 | **Mutation Testing** | `mutation-testing.yml` | Schedule (`0 4 * * 1`), `workflow_call`, `workflow_dispatch` | Runs Stryker.NET mutation testing across all 16 package components. |
+| 8 | **Benchmarks** | `benchmarks.yml` | `workflow_call`, `workflow_dispatch` | Executes on-demand BenchmarkDotNet suites and uploads markdown summaries. |
+| 9 | **Weekly Benchmarks** | `weekly-benchmarks.yml` | Schedule (`0 2 * * 0`), `workflow_dispatch` | Runs multi-TFM benchmarks (.NET 8, 9, 10) and commits baseline results. |
+| 10 | **Repo Compliance** | `repo-compliance.yml` | `push`, `pull_request` (`main`), `workflow_dispatch` | Runs `scripts/verify-compliance.ps1` to enforce architectural and governance invariants. |
 
-- **Trigger**: `push` or `pull_request` on branches `main`, `develop`
-- **Runner**: `ubuntu-latest`
+---
+
+## 3. Detailed Workflow Specifications
+
+### 3.1 Continuous Integration — `ci.yml`
+- **Triggers**: `push` and `pull_request` to `main` and `develop`.
 - **Jobs**:
-  - **`build-and-test`**: Calls reusable `dotnet-build-test.yml` with `artifact-name: test-results`
-  - **`aot-gate`**: Runs Native AOT publish validation on `ubuntu-latest`
-- **Secrets passed**: `SNK_KEY`, `CODECOV_TOKEN`, `SONAR_TOKEN`
+  - `build-and-test`: Invokes reusable `dotnet-build-test.yml` with `artifact-name: test-results`.
+  - `aot-smoke-test`: Invokes reusable `aot-smoke-test.yml`.
+- **Secrets Forwarded**: `SNK_KEY`, `CODECOV_TOKEN`, `SONAR_TOKEN`.
 
-**AOT Gate steps**:
-1. `actions/checkout@v4`
-2. Setup .NET 10.0.x
-3. `dotnet restore EricksonLopez.Processes.slnx`
-4. `dotnet publish samples/NativeAotSample/NativeAotSample.csproj -c Release -p:PublishAot=true`
-
----
-
-### 2.2 Reusable Build & Test — `dotnet-build-test.yml`
-
-- **Type**: Reusable workflow (`workflow_call`)
-- **Runner**: `ubuntu-latest`
+### 3.2 Reusable Build & Test — `dotnet-build-test.yml`
+- **Type**: Reusable workflow (`workflow_call`).
+- **Runner**: `ubuntu-latest`.
 - **Inputs**:
-  | Input | Type | Default | Description |
-  | :--- | :--- | :--- | :--- |
-  | `dotnet-version` | `string` | `10.0.x` | .NET SDK version |
-  | `test-filter` | `string` | `""` | Test filter expression |
-  | `test-project` | `string` | `""` | Specific project path |
-  | `upload-coverage` | `boolean` | `true` | Upload Codecov artifacts |
-  | `artifact-name` | `string` | `test-results` | Artifact name for test results |
-- **Secrets**:
-  | Secret | Required | Description |
-  | :--- | :--- | :--- |
-  | `SNK_KEY` | No | Base64-encoded `.snk` Strong Name key |
-  | `CODECOV_TOKEN` | No | Codecov upload token |
-  | `SONAR_TOKEN` | No | SonarCloud analysis token |
-- **Steps**:
-  1. Checkout with `fetch-depth: 0`
-  2. Setup .NET (uses `inputs.dotnet-version`)
-  3. Restore Strong Name key from `SNK_KEY` secret (base64 decode)
-  4. Setup Java 17 (Zulu) for SonarScanner
-  5. Install `dotnet-sonarscanner` (if `SONAR_TOKEN` is set)
-  6. Begin SonarCloud analysis (conditional on `SONAR_TOKEN`)
-  7. `dotnet build EricksonLopez.Processes.slnx --configuration Release`
-  8. `dotnet test` with `--collect:\"XPlat Code Coverage\"` (opencover + cobertura formats)
-  9. End SonarCloud analysis
-  10. Upload test results artifact
-  11. Upload coverage to Codecov (`codecov/codecov-action@v4`)
-- **Artifacts produced**: `test-results/` directory with `.trx` files and `coverage.opencover.xml`
+  - `dotnet-version` (string, default: `10.0.x`)
+  - `test-filter` (string, default: `""`)
+  - `test-project` (string, default: `""`)
+  - `upload-coverage` (boolean, default: `true`)
+  - `artifact-name` (string, default: `test-results`)
+- **Execution Flow**:
+  1. `actions/checkout@v4` with `fetch-depth: 0`.
+  2. Setup .NET SDK `10.0.x`.
+  3. Strong Name key decoding from `SNK_KEY` secret.
+  4. Setup Java 17 (Zulu) for SonarScanner.
+  5. Install and launch `dotnet-sonarscanner begin` (SonarCloud project: `ericksonlopezf_dotnet-processes`).
+  6. `dotnet build EricksonLopez.Processes.slnx --configuration Release`.
+  7. `dotnet test EricksonLopez.Processes.slnx --no-build --configuration Release` collecting OpenCover and Cobertura coverage.
+  8. `dotnet-sonarscanner end`.
+  9. Upload test results `.trx` artifacts.
+  10. Upload coverage report via `codecov/codecov-action@v5` (token: `CODECOV_TOKEN`, flags: `unittests`).
+
+### 3.3 NativeAOT Smoke Test — `aot-smoke-test.yml`
+- **Type**: Standalone / reusable workflow.
+- **Prerequisites**: Installs native dependencies on Ubuntu (`clang`, `lld`, `zlib1g-dev`).
+- **Compilation**:
+  ```bash
+  dotnet publish samples/NativeAotSample/NativeAotSample.csproj \
+    --configuration Release \
+    --runtime linux-x64 \
+    --self-contained \
+    -p:PublishAot=true \
+    -p:TreatWarningsAsErrors=true \
+    -p:WarningLevel=5 \
+    --output ./aot-output
+  ```
+- **Execution Validation**: Executes `./aot-output/NativeAotSample` and verifies zero exit code.
+
+### 3.4 Benchmark Regression Gate — `benchmark-regression-gate.yml`
+- **Trigger**: Pull requests affecting `src/**` or `benchmarks/**`.
+- **Harness**: BenchmarkDotNet short job exporting JSON.
+- **Validation**: Executes `scripts/verify-benchmark-gate.ps1`:
+  - **Zero Allocation Invariant**: Ensures `0 B` heap allocation on core identifier and coordinator combinators.
+  - **Latency Regression Threshold**: Fails the PR if mean latency regresses by more than **5%** vs baseline (`benchmarks/results/baseline.json`).
+
+### 3.5 Publish NuGet — `publish.yml`
+- **Permissions**: `id-token: write`, `contents: write`, `attestations: write`, `statuses: read`, `actions: read`.
+- **Quality Gates Before Publish**:
+  1. `mutation-gate-check`: Evaluates `scripts/verify-mutation-gate.js` against commit statuses.
+  2. `stryker-gate`: Conditionally executes `mutation-testing.yml` if mutation gate needs refreshing.
+  3. Full solution test execution with coverage uploaded to Codecov (`flags: publish-gate`).
+- **Packaging**: Packs all 16 library `.csproj` files individually with `-p:VersionPrefix=$VERSION` into `./nupkgs/`.
+- **Provenance Attestation**: Generates Sigstore provenance attestation (`actions/attest-build-provenance@v2`).
+- **OIDC Publishing**: Authenticates to NuGet.org via short-lived OIDC exchange (`NuGet/login@v1`, user: `ericksonlopezf`) and pushes packages with `--skip-duplicate`.
+- **GitHub Release**: Creates formal release with package inventory table (`softprops/action-gh-release@v2`).
+
+### 3.6 Release Please — `release-please.yml`
+- **Trigger**: Direct push or merged PR to `main`.
+- **Mechanism**: Evaluates Conventional Commits history using `.release-please-config.json` and `.release-please-manifest.json`.
+- **Dispatch**: Upon release creation, invokes `publish.yml` via GitHub REST API `actions.createWorkflowDispatch` passing the resolved version.
+
+### 3.7 Mutation Testing — `mutation-testing.yml`
+- **Schedule**: Every Monday at 04:00 UTC (`0 4 * * 1`) and manual dispatch.
+- **Matrix**: 16 parallel matrix jobs corresponding to each `stryker-*.json` configuration file.
+- **Threshold Policy**:
+  - `High` ($\ge 100\%$): High target standard.
+  - `Low` ($\ge 98\%$): Acceptable standard.
+  - `Break` ($< 95\%$): Hard quality gate failure (Stryker non-zero exit code).
 
 ---
 
-### 2.3 Mutation Testing — `mutation-testing.yml`
+## 4. Quality Gates & Enforcement
 
-- **Triggers**:
-  - `workflow_dispatch` (manual, with `mutation-level: Basic | Standard | Advanced`)
-  - `schedule`: Every Monday at 04:00 UTC (`0 4 * * 1`)
-- **Runner**: `ubuntu-latest`
-- **Concurrency**: `cancel-in-progress: true` per `mutation-testing-${{ github.ref }}`
-- **Timeout**: 480 minutes per job
-- **Strategy**: `fail-fast: false` matrix across all packages
-- **Packages tested**: All 16 library packages via individual `stryker-*.json` configs
-
-**Stryker Threshold Policy** (single source of truth in each `stryker-*.json`):
-
-| Band | Threshold | Outcome |
-| :--- | :--- | :--- |
-| High | ≥ 100% | ✅ HIGH |
-| Low | ≥ 98% | 🟡 LOW (warn) |
-| Warning | ≥ 95% | 🟠 WARNING |
-| Break | < 95% | ❌ FAILED (non-zero exit) |
+| Quality Gate | Tooling / Mechanism | Target Standard | Break Threshold | Enforced In |
+|---|---|:---:|:---:|---|
+| **Build Warnings** | Roslyn / MSBuild | 0 warnings | Any warning (`TreatWarningsAsErrors=true`) | All workflows |
+| **Line Coverage** | Coverlet + Codecov | 100% | < 95% | `dotnet-build-test.yml`, `publish.yml` |
+| **Branch Coverage** | Coverlet + Codecov | 100% | < 95% | `dotnet-build-test.yml`, `publish.yml` |
+| **Mutation Score** | Stryker.NET | 100% | < 95% | `mutation-testing.yml`, `publish.yml` |
+| **Hotpath Allocation** | BenchmarkDotNet | 0 B | > 0 B on hotpath | `benchmark-regression-gate.yml` |
+| **Latency Regression** | BenchmarkDotNet | 0% | > 5% vs baseline | `benchmark-regression-gate.yml` |
+| **Native AOT Safety** | ILC / AOT Analyzer | 0 warnings | Any IL2026/IL3050 warning | `aot-smoke-test.yml` |
+| **Vulnerability Audit** | MSBuild NuGetAudit | 0 vulnerabilities | Any known vulnerability | All builds (`NuGetAudit=true`) |
+| **Dependency Scanning** | Dependabot | Automated PRs | Vulnerability alert / PR | `.github/dependabot.yml` |
 
 ---
 
-### 2.4 Release Please — `release-please.yml`
+## 5. Branch & Versioning Strategy
 
-- **Trigger**: `push` on branch `main`
-- **Runner**: `ubuntu-latest`
-- **Permissions**: `contents: write`, `pull-requests: write`
-- **Steps**:
-  1. `googleapis/release-please-action@v4` — creates or updates Release PR using `.release-please-config.json` and `.release-please-manifest.json`
-  2. If `releases_created == 'true'`: triggers `publish.yml` via `workflow_dispatch` with the new `version` input
-- **Version strategy**: Determined by Conventional Commits (`feat:`, `fix:`, `chore:`, etc.)
+- **`main`**: Protected production branch. All merges trigger `release-please.yml` and produce releases when conventional changes are detected.
+- **`develop`**: Active integration branch. Validated continuously by `ci.yml`, `repo-compliance.yml`, and `aot-smoke-test.yml`.
+- **Versioning**: Strict Semantic Versioning (SemVer 2.0.0). Pre-releases contain hyphenated identifiers (e.g. `1.0.0-rc1`) and are tagged automatically as pre-releases.
 
 ---
 
-### 2.5 Publish NuGet — `publish.yml`
+## 6. Supply Chain Security
 
-- **Triggers**:
-  - `workflow_dispatch` (input: `version` — e.g., `1.2.3`)
-  - `push` with tag matching `v*.*.*` (legacy manual tag support)
-- **Runner**: `ubuntu-latest`
-- **Permissions**: `id-token: write`, `contents: write`, `attestations: write`, `statuses: read`, `actions: read`
-- **Secrets required**: `SNK_KEY`, `CODECOV_TOKEN`
-- **Steps**:
-  1. Checkout with `fetch-depth: 0`
-  2. Resolve version (priority: `workflow_dispatch` input → git tag → `Directory.Build.props`)
-  3. **Validate Stryker Mutation Quality Gate** via `scripts/verify-mutation-gate.js`
-  4. Setup .NET 10.0.x
-  5. Restore Strong Name key from `SNK_KEY`
-  6. `dotnet restore`
-  7. `dotnet build --configuration Release`
-  8. `dotnet test --configuration Release` (with coverage)
-  9. Upload coverage to Codecov (`codecov/codecov-action@v5`, flags: `publish-gate`)
-  10. `dotnet pack` — all 16 packages individually with `-p:VersionPrefix=$VERSION`
-  11. **Sigstore Provenance Attestation** (`actions/attest-build-provenance@v2`)
-  12. **NuGet OIDC Login** (`NuGet/login@v1`) — no static API key
-  13. `dotnet nuget push ./nupkgs/*.nupkg --skip-duplicate`
-  14. Create GitHub Release (tag-triggered only) with `softprops/action-gh-release@v2`
-- **Pre-release detection**: `prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}`
-- **Artifacts produced**: 16 `.nupkg` + 16 `.snupkg` files in `./nupkgs/`
+| Control | Mechanism | Verification |
+|---|---|---|
+| **Sigstore Provenance** | `actions/attest-build-provenance@v2` | Cryptographically signed build attestation verifiable via GitHub CLI and cosign. |
+| **NuGet OIDC Publishing** | `NuGet/login@v1` | Short-lived OIDC tokens replace long-lived static API keys. |
+| **Strong Name Signing** | RSA-2048 (`EricksonLopez.snk`) | Verified during build; public key embedded in `Directory.Build.props`. |
+| **Continuous Audit** | MSBuild NuGetAudit | `<NuGetAuditMode>all</NuGetAuditMode>`, `<NuGetAuditLevel>low</NuGetAuditLevel>`. |
+| **Automated Dependency Updates** | GitHub Dependabot (`.github/dependabot.yml`) | Weekly updates for NuGet CPM (`Directory.Packages.props`) and GitHub Actions. |
+| **SourceLink & Symbols** | Microsoft.SourceLink.GitHub | Symbol packages (`.snupkg`) embedded with source repository commit hashes. |
+| **Deterministic Builds** | MSBuild `<Deterministic>true</Deterministic>` | Byte-for-byte binary reproducibility across build environments. |
 
 ---
 
-## 3. Build Process Pipeline
+## 7. Required Repository Secrets
 
-```mermaid
-flowchart LR
-    A[Conventional Commit] --> B[release-please.yml\nRelease PR]
-    B --> C{PR Merged}
-    C --> D[release-please creates\nGitHub Release + tag]
-    D --> E[publish.yml triggered\nvia workflow_dispatch]
-    E --> F[Stryker Gate\nvalidation]
-    F --> G[dotnet build\n--configuration Release]
-    G --> H[dotnet test\nwith coverage]
-    H --> I[dotnet pack\n16 packages]
-    I --> J[Sigstore\nAttestation]
-    J --> K[NuGet OIDC Push\nno static API key]
-    K --> L[GitHub Release\nw/ release notes]
-```
-
----
-
-## 4. Quality Gates
-
-### Code Coverage
-
-- **Tool**: Coverlet (`--collect:\"XPlat Code Coverage\"`)
-- **Formats**: OpenCover + Cobertura
-- **Reporting**: Codecov (`codecov/codecov-action`) — token via `CODECOV_TOKEN` secret
-- **Standard**: 100% Line, Branch, and Method coverage across all runtime packages
-- **Gate on publish**: Coverage upload is also run in `publish.yml` before packing
-
-### Mutation Testing (Stryker.NET)
-
-- **Configs**: Per-package `stryker-*.json` files in repository root:
-  - `stryker-config.json` (core)
-  - `stryker-abstractions-config.json`
-  - `stryker-analyzers-config.json`
-  - `stryker-dependencyinjection-config.json`
-  - `stryker-events-config.json`
-  - `stryker-generator-config.json`
-  - `stryker-mediator-config.json`
-  - `stryker-outbox-config.json`
-  - `stryker-storagemariadb-config.json`
-  - `stryker-storagemysql-config.json`
-  - `stryker-storageoracle-config.json`
-  - `stryker-storagepostgresql-config.json`
-  - `stryker-storagesqlite-config.json`
-  - `stryker-storagesqlserver-config.json`
-  - `stryker-systemtextjson-config.json`
-  - `stryker-testing-config.json`
-- **Thresholds**: high=100, low=98, break=95
-- **Gate**: `publish.yml` calls `scripts/verify-mutation-gate.js` before packing
-
-### Static Analysis (SonarCloud)
-
-- **Tool**: `dotnet-sonarscanner` + `actions/setup-java@v3` (Java 17 Zulu)
-- **Organization**: `ericksonlopezf` on `sonarcloud.io`
-- **Project key**: `ericksonlopezf_dotnet-processes`
-- **Coverage input**: `**/coverage.opencover.xml`
-- **Secret**: `SONAR_TOKEN`
-- **Exclusions**: `samples/**`, `benchmarks/**`, `scripts/**`, generators, analyzers
-
-### Native AOT Gate
-
-- Enabled via `Directory.Build.props` for all `net8.0`+ targets:
-  - `<IsAotCompatible>true</IsAotCompatible>`
-  - `<EnableTrimAnalyzer>true</EnableTrimAnalyzer>`
-  - `<EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>`
-  - `<EnableAotAnalyzer>true</EnableAotAnalyzer>`
-- `TreatWarningsAsErrors=true` means zero trim/AOT warnings allowed at build time
-- `ci.yml` `aot-gate` job publishes `NativeAotSample` on every CI run
-
----
-
-## 5. Branch Strategy
-
-Based on workflow triggers:
-
-| Branch | CI Trigger | Notes |
-| :--- | :--- | :--- |
-| `main` | `ci.yml` (push + PR) | Protected; requires passing CI |
-| `develop` | `ci.yml` (push + PR) | Integration branch |
-| `release-please--...` | Managed by `release-please.yml` | Auto-created release PRs |
-
-> No `hotfix/*`, `feature/*`, or `release/*` branches are explicitly named in workflow triggers.
-
----
-
-## 6. Release Strategy
-
-- **Versioning**: Semantic Versioning via `release-please` + Conventional Commits
-- **Version source**: `VersionPrefix` in `Directory.Build.props` (current: `1.0.0`)
-- **Tag format**: `v*.*.*` (e.g., `v1.2.3`)
-- **Pre-release**: Package version containing `-` is marked `prerelease: true` in GitHub Release
-- **Publishing**: NuGet OIDC (Trusted Publishing via `NuGet/login@v1`) — no static API key stored in secrets
-- **Skip duplicates**: `--skip-duplicate` prevents overwrite of existing versions
-
----
-
-## 7. Supply Chain Security
-
-| Control | Implementation |
-| :--- | :--- |
-| **Sigstore Provenance Attestation** | `actions/attest-build-provenance@v2` on every `publish.yml` run |
-| **NuGet Trusted Publishing (OIDC)** | `NuGet/login@v1` — OIDC token exchange, no static `NUGET_API_KEY` in repository secrets |
-| **Strong Name Signing** | `SNK_KEY` secret (base64-encoded `.snk`); decoded during build; `EricksonLopez.Processes.snk` never committed |
-| **SourceLink** | `<PublishRepositoryUrl>true</PublishRepositoryUrl>` — source-to-binary mapping |
-| **Deterministic Builds** | `<Deterministic>true</Deterministic>` — reproducible compilation artifacts |
-| **Symbol Packages** | `<IncludeSymbols>true</IncludeSymbols>` + `<SymbolPackageFormat>snupkg</SymbolPackageFormat>` |
-| **Mutation Gate on Publish** | `scripts/verify-mutation-gate.js` blocks publish if Stryker score < threshold |
-
----
-
-## 8. Dependency Scanning
-
-Configured via `.github/dependabot.yml` (not documented here per policy — configuration is infrastructure, not documentation). The file monitors NuGet ecosystem dependencies for security updates.
-
----
-
-## 9. Required Secrets
-
-| Secret | Used By | Description |
-| :--- | :--- | :--- |
-| `SNK_KEY` | `dotnet-build-test.yml`, `publish.yml` | Base64-encoded Strong Name key |
-| `CODECOV_TOKEN` | `dotnet-build-test.yml`, `publish.yml` | Codecov upload token |
-| `SONAR_TOKEN` | `dotnet-build-test.yml` | SonarCloud analysis token |
-| `GITHUB_TOKEN` | `release-please.yml`, `publish.yml` | Built-in — no configuration needed |
+| Secret | Scope | Usage |
+|---|---|---|
+| `SNK_KEY` | Repository Secret | Base64-encoded RSA strong name signing key used on clean CI runners. |
+| `CODECOV_TOKEN` | Repository Secret | Authentication token for uploading coverage reports to Codecov.io. |
+| `SONAR_TOKEN` | Repository Secret | Authentication token for SonarCloud static analysis. |
+| `GITHUB_TOKEN` | Built-in Runner Secret | Used by Release Please and workflow dispatch triggers. |

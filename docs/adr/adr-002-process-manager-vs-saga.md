@@ -1,5 +1,11 @@
 # ADR-002: Process Manager vs. Saga Terminology and Model
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 In enterprise literature (Enterprise Integration Patterns vs. Distributed Transactions), "Process Manager" and "Saga" are often used interchangeably, yet represent nuanced architectural patterns:
 - **Process Manager**: A stateful coordinator that reacts to domain events, tracks long-term business progress across bounded contexts, and issues commands.

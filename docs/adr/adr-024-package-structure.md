@@ -1,5 +1,11 @@
 # ADR-024: Package Decomposition Strategy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 A well-factored library ecosystem minimizes package bloat while strictly isolating concerns and optional adapters.
 

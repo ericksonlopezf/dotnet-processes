@@ -61,12 +61,12 @@ public class ProcessTransitionAnalyzerTests
         missingInitial.Description.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Every process manager definition must define an initial state handler to initiate the saga lifecycle.");
 
         var missingComp = diagnostics.Single(d => d.Id == ProcessTransitionAnalyzer.DiagnosticIdMissingCompensation);
-        missingComp.Title.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Step transition missing compensation action");
-        missingComp.MessageFormat.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Saga step '{0}' defines an outbound effect without a registered compensation action");
+        missingComp.Title.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Saga definition missing compensation logic");
+        missingComp.MessageFormat.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Saga '{0}' does not implement ICompensationHandler or declare compensation logic");
         missingComp.Category.Should().Be("Reliability");
         missingComp.DefaultSeverity.Should().Be(DiagnosticSeverity.Info);
         missingComp.IsEnabledByDefault.Should().BeTrue();
-        missingComp.Description.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Compensating actions are recommended for all saga steps performing outbound side effects.");
+        missingComp.Description.ToString(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Compensating actions are recommended for all saga definitions to ensure fault tolerance.");
     }
 
     [Fact]
@@ -388,6 +388,312 @@ public class GeneratedProcess
 
         diagnostics.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task SagaDefinition_WithHandler_WithoutCompensation_ShouldReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[SagaDefinition(""order.saga"", 1)]
+public class OrderSaga
+{
+    [ProcessHandler]
+    public void HandleOrder() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+
+        diagnostics.Should().HaveCount(1);
+        var diagnostic = diagnostics[0];
+        diagnostic.Id.Should().Be(ProcessTransitionAnalyzer.DiagnosticIdMissingCompensation);
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Info);
+        diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Be("Saga 'OrderSaga' does not implement ICompensationHandler or declare compensation logic");
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithHandler_WithCompensation_ShouldNotReportDiagnostics()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[SagaDefinition(""order.saga"", 1)]
+public class OrderSaga
+{
+    [ProcessHandler]
+    public void HandleOrder() { }
+
+    public void CompensateAsync() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessDefinition_WithInterfaceStartingWithIProcessHandler_ShouldNotReportPROC001()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+public interface IProcessHandlerCustom
+{
+    void Handle();
+}
+
+[ProcessDefinition(""order.flow"", 1)]
+public class CustomProcess : IProcessHandlerCustom
+{
+    public void Handle() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessDefinition_WithInterfaceNotStartingWithIProcessHandler_ShouldReportPROC001()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+public interface INotAProcessHandler
+{
+    void DoSomething();
+}
+
+[ProcessDefinition(""order.flow"", 1)]
+public class InvalidProcess : INotAProcessHandler
+{
+    public void DoSomething() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().HaveCount(1);
+        diagnostics[0].Id.Should().Be(ProcessTransitionAnalyzer.DiagnosticIdMissingInitialState);
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithInterfaceStartingWithICompensationHandler_ShouldNotReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+public interface ICompensationHandlerCustom
+{
+    void Undo();
+}
+
+[SagaDefinition(""order.saga"", 1)]
+public class CustomSaga : ICompensationHandlerCustom
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    public void Undo() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithInterfaceNotStartingWithICompensationHandler_ShouldReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+public interface INotACompensationHandler
+{
+    void DoSomething();
+}
+
+[SagaDefinition(""order.saga"", 1)]
+public class IncompleteSaga : INotACompensationHandler
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    public void DoSomething() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().HaveCount(1);
+        diagnostics[0].Id.Should().Be(ProcessTransitionAnalyzer.DiagnosticIdMissingCompensation);
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithSyncCompensateMethod_ShouldNotReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[SagaDefinition(""order.saga"", 1)]
+public class SyncCompensateSaga
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    public void Compensate() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithCompensationHandlerAttribute_ShouldNotReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class CompensationHandlerAttribute : Attribute { }
+
+[SagaDefinition(""order.saga"", 1)]
+public class AttributeCompensateSaga
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    [CompensationHandler]
+    public void RevertState() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithCompensationHandlerShortAttribute_ShouldNotReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class CompensationHandler : Attribute { }
+
+[SagaDefinition(""order.saga"", 1)]
+public class AttributeCompensateSaga
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    [CompensationHandler]
+    public void RevertState() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithCompensateAttribute_ShouldNotReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class CompensateAttribute : Attribute { }
+
+[SagaDefinition(""order.saga"", 1)]
+public class AttributeCompensateSaga
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    [Compensate]
+    public void RevertState() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithCompensateShortAttribute_ShouldNotReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class Compensate : Attribute { }
+
+[SagaDefinition(""order.saga"", 1)]
+public class AttributeCompensateSaga
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    [Compensate]
+    public void RevertState() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SagaDefinition_WithUnrelatedAttribute_ShouldReportPROC002()
+    {
+        const string source = @"
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+namespace MyTest;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class UnrelatedAttribute : Attribute { }
+
+[SagaDefinition(""order.saga"", 1)]
+public class AttributeCompensateSaga
+{
+    [ProcessHandler]
+    public void Handle() { }
+
+    [Unrelated]
+    public void RevertState() { }
+}
+";
+        var diagnostics = await RunAnalyzerAsync(source);
+        diagnostics.Should().HaveCount(1);
+        diagnostics[0].Id.Should().Be(ProcessTransitionAnalyzer.DiagnosticIdMissingCompensation);
+    }
+
 
     [Fact]
     public void Initialize_ShouldEnableConcurrentExecution_AndRegisterSymbolAction()

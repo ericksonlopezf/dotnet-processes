@@ -1,7 +1,10 @@
 # ADR-032: `ISpanParsable<TSelf>` and `ISpanFormattable` Implementation in Identifiers
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

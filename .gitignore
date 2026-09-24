@@ -1,17 +1,27 @@
-## =====================================
-## .NET Build & Compilation
-## =====================================
+## ==============================================================================
+## .NET Build & Compilation Outputs
+## ==============================================================================
+[Bb]in/
+[Oo]bj/
 bin/
 obj/
 Generated/
-[Bb]in/
-[Oo]bj/
+**/.generated/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM64/
+bld/
+*.aot/
+*.binlog
 
-## =====================================
-## IDEs & Editors
-## =====================================
+## ==============================================================================
+## IDEs, Editors & AI Assistants
+## ==============================================================================
 # Visual Studio
 .vs/
+.vsidx/
 *.user
 *.suo
 *.userosscache
@@ -22,67 +32,112 @@ Generated/
 *.vspx
 *.sap
 *.aps
+*.VC.db
+*.VC.opendb
 
 # JetBrains (Rider / ReSharper)
 .idea/
 *.DotSettings.user
 _ReSharper*/
+*.ide
 
-# VS Code
-.vscode/
+# Visual Studio Code (ignore personal workspace state, preserve team templates if any)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-## =====================================
+# Antigravity & AI Agent Local State
+.agents/scratch/
+.gemini/
+.antigravity/
+
+## ==============================================================================
 ## Testing, Code Coverage & Mutation
-## =====================================
+## ==============================================================================
 TestResults/
+**/TestResults/
 *.trx
 coverage/
+**/coverage/
 CoverageReport/
+coveragereport/
 *.cobertura.xml
 *.coverage
 *.coveragexml
+coverage.opencover.xml
+*.info
 
 # Stryker Mutator
 .stryker-tmp/
 StrykerOutput/
 StrykerResults/
 
-## =====================================
+## ==============================================================================
 ## Code Quality & Static Analysis
-## =====================================
+## ==============================================================================
 .sonarqube/
 .sonar/
 
-## =====================================
-## NuGet Packages & Artifacts
-## =====================================
+## ==============================================================================
+## NuGet Packages & Build Artifacts
+## ==============================================================================
 *.nupkg
 *.snupkg
 artifacts/
+**/artifacts/
 BenchmarkDotNet.Artifacts/
+**/BenchmarkDotNet.Artifacts/
+packages/
+**/packages/
+project.lock.json
 
-## =====================================
+## ==============================================================================
+## Local Databases, SQLite & Test Caches
+## ==============================================================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.sqlite-shm
+*.sqlite-wal
+
+## ==============================================================================
+## Node.js & Script Dependencies
+## ==============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## ==============================================================================
 ## Logs, Dumps & Diagnostics
-## =====================================
+## ==============================================================================
 *.log
 *.dmp
 *.crash
 *.stackdump
+*.clog
 
-## =====================================
-## Secrets & Local Environment Variables
-## =====================================
+## ==============================================================================
+## Secrets, Credentials & Local Environment Overrides
+## ==============================================================================
 *.env
 *.env.local
+*.env.*.local
 *.local.json
+appsettings*.local.json
 
-## =====================================
-## Operating System & Git Files
-## =====================================
+## ==============================================================================
+## Operating System & Git Leftovers
+## ==============================================================================
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
 
 # macOS
 .DS_Store
@@ -93,6 +148,7 @@ Desktop.ini
 # Linux
 *~
 .directory
+.*.sw[a-p]
 
 # Git / Merge leftovers
 *.orig

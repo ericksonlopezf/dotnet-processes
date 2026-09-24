@@ -1,4 +1,11 @@
 # Architectural Decision Record: REJECT-010
+
+## Status
+Rejected
+
+## Date
+2026-09-04
+
 ## Rejection of Saga Orchestration inside Mediator IPipelineBehavior
 
 ### Status

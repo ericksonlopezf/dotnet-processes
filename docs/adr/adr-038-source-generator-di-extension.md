@@ -1,7 +1,10 @@
 # ADR-038: Source Generator DI Extension (`AddGeneratedProcesses`)
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

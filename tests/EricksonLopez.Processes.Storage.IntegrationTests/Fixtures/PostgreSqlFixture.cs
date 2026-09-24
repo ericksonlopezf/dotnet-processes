@@ -41,7 +41,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
                 updated_at TIMESTAMPTZ NOT NULL,
                 completed_at TIMESTAMPTZ NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_process_instances_correlation_id ON process_instances(correlation_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_process_instances_correlation_id ON process_instances(correlation_id);
             """;
 
         await using var cmd = new NpgsqlCommand(ddl, connection);

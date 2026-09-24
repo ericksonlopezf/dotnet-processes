@@ -32,14 +32,14 @@ public class ProcessCoordinatorOptionsTests
     }
 
     [Theory]
-    [InlineData(1, 10)]
-    [InlineData(2, 20)]
-    [InlineData(3, 30)]
-    [InlineData(5, 50)]
-    public void DefaultBackoffStrategy_ShouldReturnExpectedLinearDelay(int attempt, int expectedMilliseconds)
+    [InlineData(1, 100)]
+    [InlineData(2, 200)]
+    [InlineData(3, 400)]
+    [InlineData(5, 1000)]
+    public void DefaultBackoffStrategy_ShouldReturnExpectedExponentialDelayWithJitter(int attempt, int expectedMilliseconds)
     {
         var delay = ProcessCoordinator<object>.DefaultBackoffStrategy(attempt);
-        delay.Should().Be(TimeSpan.FromMilliseconds(expectedMilliseconds));
+        delay.TotalMilliseconds.Should().BeInRange(expectedMilliseconds, expectedMilliseconds + 50);
     }
 
     [Fact]
@@ -55,6 +55,51 @@ public class ProcessCoordinatorOptionsTests
             var calculatedDelay = TimeSpan.FromMilliseconds(options.InitialBackoffDelay.TotalMilliseconds * attempt);
             calculatedDelay.Should().Be(TimeSpan.FromMilliseconds(25 * attempt));
         }
+    }
+
+    [Fact]
+    public void InitialBackoffDelay_ZeroOrNegative_ShouldThrowArgumentOutOfRangeException()
+    {
+        var options = new ProcessCoordinatorOptions();
+
+        var actZero = () => options.InitialBackoffDelay = TimeSpan.Zero;
+        actZero.Should().ThrowExactly<ArgumentOutOfRangeException>()
+            .WithParameterName("value")
+            .WithMessage("*Initial backoff delay must be greater than zero.*");
+
+        var actNegative = () => options.InitialBackoffDelay = TimeSpan.FromSeconds(-1);
+        actNegative.Should().ThrowExactly<ArgumentOutOfRangeException>()
+            .WithParameterName("value")
+            .WithMessage("*Initial backoff delay must be greater than zero.*");
+
+        options.InitialBackoffDelay = TimeSpan.FromMilliseconds(1);
+        options.InitialBackoffDelay.Should().Be(TimeSpan.FromMilliseconds(1));
+    }
+
+    [Fact]
+    public void MaxCompensations_ShouldClampNegativeValuesToZeroAndRetainPositive()
+    {
+        var options = new ProcessCoordinatorOptions();
+        options.MaxCompensations.Should().Be(1000);
+
+        options.MaxCompensations = -10;
+        options.MaxCompensations.Should().Be(0);
+
+        options.MaxCompensations = 25;
+        options.MaxCompensations.Should().Be(25);
+    }
+
+    [Fact]
+    public void MaxConcurrencyRetries_ShouldClampNegativeValuesToZeroAndRetainPositive()
+    {
+        var options = new ProcessCoordinatorOptions();
+        options.MaxConcurrencyRetries.Should().Be(3);
+
+        options.MaxConcurrencyRetries = -5;
+        options.MaxConcurrencyRetries.Should().Be(0);
+
+        options.MaxConcurrencyRetries = 8;
+        options.MaxConcurrencyRetries.Should().Be(8);
     }
 }
 

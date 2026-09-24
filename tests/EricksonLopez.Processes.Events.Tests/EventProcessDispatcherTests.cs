@@ -169,12 +169,17 @@ public sealed class EventProcessDispatcherTests
     [Fact]
     public async Task DispatchEffectAsync_WhenScheduleTimeoutWithEventPayload_PublishesEventWithCancellationToken()
     {
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var sut = new EventProcessDispatcher(_eventPublisher, fakeTime);
         var evt = new TestDomainEvent("timeout-event");
-        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.FromMinutes(5), evt);
+        var delay = TimeSpan.FromMinutes(5);
+        var effect = new ProcessEffect.ScheduleTimeout(delay, evt);
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;
 
-        await _sut.DispatchEffectAsync(effect, _processId, ct);
+        var task = sut.DispatchEffectAsync(effect, _processId, ct).AsTask();
+        fakeTime.Advance(delay);
+        await task;
 
         await _eventPublisher.Received(1).PublishAsync(
             Arg.Is<TestDomainEvent>(e => ReferenceEquals(e, evt)),
@@ -246,6 +251,84 @@ public sealed class EventProcessDispatcherTests
         await _sut.DispatchEffectAsync(effect, _processId);
 
         await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync<IEvent>(default!, default);
+    }
+
+    [Fact]
+    public async Task DispatchEffectAsync_WhenScheduleTimeoutHasPositiveDelay_DelaysAndPublishesEvent()
+    {
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var sut = new EventProcessDispatcher(_eventPublisher, fakeTime);
+        var evt = new TestDomainEvent("timeout-event");
+        var delay = TimeSpan.FromSeconds(30);
+        var effect = new ProcessEffect.ScheduleTimeout(delay, evt);
+
+        var dispatchTask = sut.DispatchEffectAsync(effect, _processId).AsTask();
+
+        // Before time advances, it should not have published yet
+        await _eventPublisher.DidNotReceive().PublishAsync(evt, Arg.Any<CancellationToken>());
+
+        // Advance time past the delay
+        fakeTime.Advance(delay);
+        await dispatchTask;
+
+        // Now it must be published
+        await _eventPublisher.Received(1).PublishAsync(evt, Arg.Any<CancellationToken>());
+    }
+
+#pragma warning disable CA2012 // Intentional inspection of ValueTask passthrough without awaiting
+    [Fact]
+    public void DispatchEffectAsync_WhenScheduleTimeoutHasZeroDelay_PublishesImmediatelyWithoutDelay()
+    {
+        var tcs = new TaskCompletionSource();
+        var expectedTask = new ValueTask(tcs.Task);
+        var publisher = Substitute.For<IEventPublisher>();
+        var evt = new TestDomainEvent("zero-delay-event");
+        publisher.PublishAsync(evt, Arg.Any<CancellationToken>()).Returns(expectedTask);
+
+        var sut = new EventProcessDispatcher(publisher);
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.Zero, evt);
+
+        // Published directly without scheduling async delayed task
+        sut.DispatchEffectAsync(effect, _processId).AsTask().Should().BeSameAs(tcs.Task);
+    }
+
+    [Fact]
+    public void DispatchEffectAsync_WhenScheduleTimeoutHasNegativeDelay_PublishesImmediatelyWithoutDelay()
+    {
+        var tcs = new TaskCompletionSource();
+        var expectedTask = new ValueTask(tcs.Task);
+        var publisher = Substitute.For<IEventPublisher>();
+        var evt = new TestDomainEvent("negative-delay-event");
+        publisher.PublishAsync(evt, Arg.Any<CancellationToken>()).Returns(expectedTask);
+
+        var sut = new EventProcessDispatcher(publisher);
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.FromSeconds(-5), evt);
+
+        // Published directly without scheduling async delayed task
+        sut.DispatchEffectAsync(effect, _processId).AsTask().Should().BeSameAs(tcs.Task);
+    }
+#pragma warning restore CA2012
+
+    [Fact]
+    public async Task DispatchEffectAsync_WhenScheduleTimeoutHasExactlyZeroDelay_CompletesImmediatelyWithoutAdvancingTime()
+    {
+        // This test specifically kills the mutant: 	imeout.Delay >= TimeSpan.Zero
+        // With the mutant, TimeSpan.Zero would enter ScheduleDelayedEventAsync which
+        // awaits Task.Delay(zero, frozenTimeProvider, ct). Since FakeTimeProvider is
+        // never advanced, the await would never complete -- making this test hang.
+        // The correct code uses > TimeSpan.Zero so delay == Zero takes the
+        // immediate synchronous PublishAsync path, completing without time advance.
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var sut = new EventProcessDispatcher(_eventPublisher, fakeTime);
+        var evt = new TestDomainEvent("zero-boundary-event");
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.Zero, evt);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await sut.DispatchEffectAsync(effect, _processId, cts.Token);
+
+        await _eventPublisher.Received(1).PublishAsync(
+            Arg.Is<TestDomainEvent>(e => ReferenceEquals(e, evt)),
+            Arg.Is<CancellationToken>(c => c == cts.Token));
     }
 
     [Fact]

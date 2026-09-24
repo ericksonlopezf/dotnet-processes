@@ -515,6 +515,107 @@ public class SystemTextJsonTests
         actDeserializeNull.Should().Throw<JsonException>()
             .WithMessage($"Failed to deserialize payload into state of type '{nameof(SampleProcessState)}'.");
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-1024)]
+    public void SystemTextJsonProcessStateSerializer_Constructor_WithInvalidMaxPayloadSize_ShouldThrowArgumentOutOfRangeException(int invalidSize)
+    {
+        var act = () => new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState,
+            invalidSize);
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .WithParameterName("maxPayloadSizeBytes")
+            .WithMessage("*Maximum payload size in bytes must be greater than zero.*");
+    }
+
+    [Fact]
+    public void SystemTextJsonProcessStateSerializer_WithMaxPayloadSize_ShouldExposeConfiguredProperty()
+    {
+        var serializerWithoutLimit = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState);
+        serializerWithoutLimit.MaxPayloadSizeBytes.Should().BeNull();
+
+        var serializerWithLimit = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState,
+            4096);
+        serializerWithLimit.MaxPayloadSizeBytes.Should().Be(4096);
+    }
+
+    [Fact]
+    public void SystemTextJsonProcessStateSerializer_Serialize_WhenExceedingMaxPayloadSize_ShouldThrowInvalidOperationException()
+    {
+        // ARRANGE: Set limit to 10 bytes (state JSON is ~50 bytes)
+        var serializer = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState,
+            maxPayloadSizeBytes: 10);
+
+        var state = new SampleProcessState("ORD-777", 450.50m, true);
+
+        // ACT & ASSERT
+        var act = () => serializer.Serialize(state);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Serialized state payload size*exceeds the configured maximum allowed size of 10 bytes.*");
+    }
+
+    [Fact]
+    public void SystemTextJsonProcessStateSerializer_Deserialize_WhenExceedingMaxPayloadSize_ShouldThrowInvalidOperationException()
+    {
+        // ARRANGE: Set limit to 15 bytes
+        var serializer = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState,
+            maxPayloadSizeBytes: 15);
+
+        var validStateJson = "{\"orderId\":\"ORD-777\",\"amount\":450.50,\"isPaid\":true}";
+        var bytes = Encoding.UTF8.GetBytes(validStateJson);
+        bytes.Length.Should().BeGreaterThan(15);
+
+        // ACT & ASSERT
+        var act = () => serializer.Deserialize(bytes);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"*Incoming state payload size ({bytes.Length} bytes) exceeds the configured maximum allowed size of 15 bytes.*");
+    }
+
+    [Fact]
+    public void SystemTextJsonProcessStateSerializer_SerializeAndDeserialize_WithinMaxPayloadSize_ShouldSucceed()
+    {
+        // ARRANGE: Set limit to 1024 bytes (sufficient for state)
+        var serializer = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState,
+            maxPayloadSizeBytes: 1024);
+
+        var state = new SampleProcessState("ORD-999", 1200.00m, false);
+
+        // ACT
+        var bytes = serializer.Serialize(state);
+        var restored = serializer.Deserialize(bytes);
+
+        // ASSERT
+        restored.Should().Be(state);
+    }
+
+    [Fact]
+    public void SystemTextJsonProcessStateSerializer_SerializeAndDeserialize_ExactlyAtMaxPayloadSize_ShouldSucceed()
+    {
+        var unconstrained = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState);
+        var state = new SampleProcessState("ORD-EXACT", 100.00m, true);
+        var bytes = unconstrained.Serialize(state);
+        var exactLength = bytes.Length;
+
+        var exactSerializer = new SystemTextJsonProcessStateSerializer<SampleProcessState>(
+            TestJsonContext.Default.SampleProcessState,
+            maxPayloadSizeBytes: exactLength);
+
+        // When size == maxPayloadSizeBytes, it must NOT throw (testing that limit is strict > and not >=)
+        var serialized = exactSerializer.Serialize(state);
+        serialized.Length.Should().Be(exactLength);
+
+        var deserialized = exactSerializer.Deserialize(serialized);
+        deserialized.Should().Be(state);
+    }
 }
 #pragma warning restore IL2026, IL3050
 

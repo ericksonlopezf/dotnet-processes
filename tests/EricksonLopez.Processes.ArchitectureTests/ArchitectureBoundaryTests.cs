@@ -264,4 +264,73 @@ public class ArchitectureBoundaryTests
 
         result.IsSuccessful.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(typeof(ProcessId))]
+    [InlineData(typeof(CorrelationId))]
+    [InlineData(typeof(CausationId))]
+    [InlineData(typeof(MessageId))]
+    [InlineData(typeof(ProcessType))]
+    [InlineData(typeof(ProcessVersion))]
+    [InlineData(typeof(Revision))]
+    public void ValueObjectStructs_ShouldBeValueTypesAndImplementRequiredInterfaces(Type type)
+    {
+        type.IsValueType.Should().BeTrue();
+        typeof(ISpanFormattable).IsAssignableFrom(type).Should().BeTrue();
+        typeof(IFormattable).IsAssignableFrom(type).Should().BeTrue();
+        typeof(IComparable).IsAssignableFrom(type).Should().BeTrue();
+
+        var interfaces = type.GetInterfaces();
+        interfaces.Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IComparable<>)).Should().BeTrue();
+        interfaces.Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEquatable<>)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(typeof(ProcessInstance<>))]
+    [InlineData(typeof(ProcessTransitionResult<>))]
+    [InlineData(typeof(ProcessExecutionResult<>))]
+    public void CoreModelRecords_ShouldBeSealedClasses(Type genericTypeDef)
+    {
+        genericTypeDef.IsClass.Should().BeTrue();
+        genericTypeDef.IsSealed.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(typeof(ProcessNotFoundException))]
+    [InlineData(typeof(ConcurrencyConflictException))]
+    [InlineData(typeof(InvalidProcessTransitionException))]
+    [InlineData(typeof(CompensationFailedException))]
+    public void DomainExceptions_ShouldInheritFromProcessException(Type exceptionType)
+    {
+        typeof(ProcessException).IsAssignableFrom(exceptionType).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ProductionAssemblies_ShouldHaveZeroObsoleteAttributes()
+    {
+        var assemblies = new[]
+        {
+            typeof(ProcessId).Assembly,
+            typeof(ProcessCoordinator<>).Assembly,
+            typeof(SqliteProcessStore<>).Assembly,
+            typeof(SqlServerProcessStore<>).Assembly,
+            typeof(PostgreSqlProcessStore<>).Assembly,
+            typeof(MySqlProcessStore<>).Assembly,
+            typeof(MariaDbProcessStore<>).Assembly,
+            typeof(OracleProcessStore<>).Assembly,
+            typeof(SystemTextJsonProcessStateSerializer<>).Assembly,
+            typeof(EventProcessDispatcher).Assembly,
+            typeof(MediatorProcessDispatcher).Assembly,
+            typeof(OutboxProcessDispatcher).Assembly
+        };
+
+        foreach (var assembly in assemblies)
+        {
+            var typesWithObsolete = assembly.GetTypes()
+                .Where(t => t.GetCustomAttributes(typeof(ObsoleteAttribute), inherit: false).Length > 0)
+                .ToList();
+
+            typesWithObsolete.Should().BeEmpty($"Assembly '{assembly.GetName().Name}' should contain zero [Obsolete] types.");
+        }
+    }
 }

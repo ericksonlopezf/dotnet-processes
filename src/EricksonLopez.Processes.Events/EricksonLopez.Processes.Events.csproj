@@ -5,7 +5,7 @@
     
     <Title>EricksonLopez.Processes.Events</Title>
     <Description>Event dispatching integration for EricksonLopez.Processes. Bridges process manager effects to EricksonLopez.Events.Contracts event publishers.</Description>
-    <PackageTags>$(CommonPackageTags);event-driven;domain-events;integration-events;event-publishing;native-aot;trimming</PackageTags>
+    <PackageTags>$(CommonPackageTags);events;event-driven;domain-events;integration-events;event-publishing;native-aot;trimming</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

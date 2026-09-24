@@ -1,5 +1,11 @@
 # ADR-027: Process Version Coexistence
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 When a new workflow revision (`OrderFulfillmentProcessV2`) is deployed, existing long-running instances started under `OrderFulfillmentProcessV1` may need to complete under the original V1 rules rather than migrating to V2.
 

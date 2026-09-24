@@ -8,12 +8,6 @@ using EricksonLopez.Processes.Abstractions;
 
 namespace EricksonLopez.Processes;
 
-internal static class ProcessTransitionDefaults
-{
-    internal static readonly IReadOnlyList<ProcessEffect> EmptyEffects = Array.Empty<ProcessEffect>();
-    internal static readonly IReadOnlyList<CompensationStep> EmptyCompensations = Array.Empty<CompensationStep>();
-}
-
 /// <summary>
 /// Represents the outcome of handling an event within a process manager or saga.
 /// </summary>

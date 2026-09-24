@@ -65,6 +65,11 @@ public sealed record ProcessInstance<TState>
     public TState State { get; init; }
 
     /// <summary>
+    /// Gets the list of recorded compensation steps, if any.
+    /// </summary>
+    public IReadOnlyList<CompensationStep> RecordedCompensations { get; init; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ProcessInstance{TState}"/> record with the specified metadata and domain state.
     /// </summary>
     /// <param name="id">The unique identifier of the process instance.</param>
@@ -77,6 +82,7 @@ public sealed record ProcessInstance<TState>
     /// <param name="updatedAt">The UTC last-updated timestamp.</param>
     /// <param name="completedAt">The optional UTC completion timestamp.</param>
     /// <param name="state">The immutable domain state payload.</param>
+    /// <param name="recordedCompensations">The optional list of recorded compensation steps.</param>
     /// <exception cref="ArgumentNullException"><paramref name="state"/> is <see langword="null"/></exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S107:Methods should not have too many parameters", Justification = "Comprehensive domain state record requires all core instance properties")]
     public ProcessInstance(
@@ -89,7 +95,8 @@ public sealed record ProcessInstance<TState>
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
         DateTimeOffset? completedAt,
-        TState state)
+        TState state,
+        IReadOnlyList<CompensationStep>? recordedCompensations = null)
     {
         Id = id;
         Type = type;
@@ -101,6 +108,7 @@ public sealed record ProcessInstance<TState>
         UpdatedAt = updatedAt;
         CompletedAt = completedAt;
         State = state ?? throw new ArgumentNullException(nameof(state));
+        RecordedCompensations = recordedCompensations ?? [];
     }
 
     /// <summary>
@@ -132,7 +140,8 @@ public sealed record ProcessInstance<TState>
             createdAt: now,
             updatedAt: now,
             completedAt: null,
-            state: initialState);
+            state: initialState,
+            recordedCompensations: []);
     }
 
     /// <summary>
@@ -141,15 +150,37 @@ public sealed record ProcessInstance<TState>
     /// <param name="newState">The updated domain state payload.</param>
     /// <param name="newStatus">The updated lifecycle status.</param>
     /// <param name="now">The current UTC timestamp.</param>
+    /// <param name="newCompensations">The optional new compensation steps recorded during this transition.</param>
+    /// <param name="maxCompensations">The maximum allowed compensations before throwing an exception. Defaults to 1000.</param>
     /// <returns>A new <see cref="ProcessInstance{TState}"/> record representing the advanced state.</returns>
+    /// <exception cref="InvalidProcessTransitionException">The process instance is in a terminal status and cannot be advanced</exception>
+    /// <exception cref="InvalidOperationException">The number of compensations exceeded the maximum allowed</exception>
     public ProcessInstance<TState> Advance(
         TState newState,
         ProcessStatus newStatus,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        IReadOnlyList<CompensationStep>? newCompensations = null,
+        int maxCompensations = 1000)
     {
+        if (Status is ProcessStatus.Completed or ProcessStatus.Compensated or ProcessStatus.Failed)
+        {
+            throw new InvalidProcessTransitionException(
+                Id, Status, newStatus, $"Cannot advance process '{Id}' because it is in terminal status '{Status}'.");
+        }
+
         var completedAt = newStatus is ProcessStatus.Completed or ProcessStatus.Compensated or ProcessStatus.Failed
             ? now
             : (DateTimeOffset?)null;
+
+        var compensations = (newCompensations is { Count: > 0 })
+            ? (RecordedCompensations.Count > 0 ? [.. RecordedCompensations, .. newCompensations] : newCompensations)
+            : RecordedCompensations;
+
+        if (compensations.Count > maxCompensations)
+        {
+            throw new InvalidOperationException(
+                $"Process '{Id}' exceeded the maximum allowed compensation steps ({maxCompensations}). This is to prevent memory leaks in infinite processes.");
+        }
 
         return this with
         {
@@ -157,7 +188,46 @@ public sealed record ProcessInstance<TState>
             Status = newStatus,
             Revision = Revision.Next(),
             UpdatedAt = now,
-            CompletedAt = completedAt
+            CompletedAt = completedAt,
+            RecordedCompensations = compensations
+        };
+    }
+
+    /// <summary>
+    /// Advances the process instance to a new state during a compensation step, removing the last recorded compensation.
+    /// </summary>
+    /// <param name="newState">The updated domain state payload.</param>
+    /// <param name="newStatus">The updated lifecycle status.</param>
+    /// <param name="now">The current UTC timestamp.</param>
+    /// <returns>A new <see cref="ProcessInstance{TState}"/> record representing the advanced state.</returns>
+    /// <exception cref="InvalidProcessTransitionException">The process instance is in a terminal status and cannot be advanced</exception>
+    public ProcessInstance<TState> AdvanceCompensation(
+        TState newState,
+        ProcessStatus newStatus,
+        DateTimeOffset now)
+    {
+        if (Status is ProcessStatus.Completed or ProcessStatus.Compensated or ProcessStatus.Failed)
+        {
+            throw new InvalidProcessTransitionException(
+                Id, Status, newStatus, $"Cannot advance compensation for process '{Id}' because it is in terminal status '{Status}'.");
+        }
+
+        var completedAt = newStatus is ProcessStatus.Completed or ProcessStatus.Compensated or ProcessStatus.Failed
+            ? now
+            : (DateTimeOffset?)null;
+
+        var updatedCompensations = RecordedCompensations.Count > 0
+            ? RecordedCompensations.Take(RecordedCompensations.Count - 1).ToList()
+            : RecordedCompensations;
+
+        return this with
+        {
+            State = newState,
+            Status = newStatus,
+            Revision = Revision.Next(),
+            UpdatedAt = now,
+            CompletedAt = completedAt,
+            RecordedCompensations = updatedCompensations
         };
     }
 }

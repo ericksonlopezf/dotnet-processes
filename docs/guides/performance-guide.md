@@ -124,9 +124,34 @@ The library is 100% AOT-compatible when used with `SystemTextJsonProcessStateSer
 
 ---
 
+## State Payload Sizing and Memory Exhaustion Prevention
+
+`IProcessState` is designed to represent the **current snapshot** of an active process or saga aggregate, **not an append-only event log**. 
+
+### Anti-Pattern: Unbounded State Accumulation
+Appending large collections or sub-events to the state record (e.g., `List<OrderEvent>` accumulating thousands of entries) causes severe performance degradation:
+- **LOH Allocation**: Payloads exceeding 85,000 bytes allocate directly into the Large Object Heap (LOH), inducing Gen 2 garbage collections and memory fragmentation.
+- **Serialization Latency**: High JSON serialization overhead on every state transition.
+- **Database I/O Amplification**: Heavy write amplification updating the entire JSON/JSONB column on every OCC revision increment.
+
+### Best Practices:
+1. **Keep Payloads Under 64 KB**: Maintain saga states as compact aggregates storing only active coordination markers, status flags, and minimal contextual IDs.
+2. **Offload Large Payloads**: Reference external business data via IDs or Claim Check pattern rather than embedding large blobs within the state.
+3. **Enforce Hard Payload Limits**: Configure `SystemTextJsonProcessStateSerializer<TState>` with a defensive `maxPayloadSizeBytes` threshold to reject oversized states before memory exhaustion:
+
+```csharp
+// Limit serialized state to 64 KB to strictly prevent LOH allocation and DoS
+var serializer = new SystemTextJsonProcessStateSerializer<OrderState>(
+    OrderJsonContext.Default.OrderState,
+    maxPayloadSizeBytes: 64 * 1024);
+```
+
+---
+
 ## Storage Performance Tips
 
 - **PostgreSQL**: Use JSONB column type for `StateJson` — faster binary parsing than `JSON`. Enable `pg_trgm` for correlation ID lookups. Use `UNLOGGED TABLE` for ephemeral test processes.
 - **SQL Server**: Index the `correlation_id` + `process_type` composite column. Use `READ_COMMITTED_SNAPSHOT` isolation to reduce lock contention.
 - **SQLite**: Use `WAL` journal mode (`PRAGMA journal_mode=WAL`) for concurrent read/write workloads.
 - **General**: Keep `tableName` table per state type — avoids single-table discriminator hot spots.
+

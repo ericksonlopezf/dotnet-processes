@@ -18,6 +18,9 @@ Consolidated report documenting the architectural refinements, issue resolutions
    - Adopted Roy Osherove naming convention across all test methods with justified `IDE1006` suppression in test assemblies (ADR-034).
 6. **Documentation and Showcase Overhaul**:
    - Standardized all repository documentation in English with `kebab-case.md` naming convention and 11 progressive showcase levels.
+7. **Defensive State Payload Sizing & DoS Guard (Mega-Audit Finding Remediated)**:
+   - Implemented `MaxPayloadSizeBytes` protection in `SystemTextJsonProcessStateSerializer<TState>` with zero-allocation checks on serialization and deserialization, preventing Large Object Heap (LOH) exhaustion and massive payload DoS attacks.
+   - Published comprehensive sizing guidelines and troubleshooting procedures in `docs/guides/performance-guide.md` and `docs/guides/troubleshooting.md`.
 
 ---
 

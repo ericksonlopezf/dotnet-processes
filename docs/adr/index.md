@@ -10,14 +10,14 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-001](ADR-001-core-responsibility.md) | Core Responsibility Boundary | Accepted |
-| [ADR-002](ADR-002-process-manager-vs-saga.md) | Process Manager vs. Saga Differentiation | Accepted |
-| [ADR-003](ADR-003-process-identity.md) | Process Identity (`ProcessId`) | Accepted |
-| [ADR-004](ADR-004-process-type-identity.md) | Process Type Identity (`ProcessType`) | Accepted |
-| [ADR-005](ADR-005-process-versioning.md) | Process Versioning (`ProcessVersion`) | Accepted |
-| [ADR-006](ADR-006-process-state.md) | Process State Design (`IProcessState`) | Accepted |
-| [ADR-007](ADR-007-process-instance.md) | Process Instance Record (`ProcessInstance`) | Accepted |
-| [ADR-008](ADR-008-correlation-model.md) | Correlation Model (`CorrelationId`, `CausationId`) | Accepted |
+| [ADR-001](adr-001-core-responsibility.md) | Core Responsibility Boundary | Accepted |
+| [ADR-002](adr-002-process-manager-vs-saga.md) | Process Manager vs. Saga Differentiation | Accepted |
+| [ADR-003](adr-003-process-identity.md) | Process Identity (`ProcessId`) | Accepted |
+| [ADR-004](adr-004-process-type-identity.md) | Process Type Identity (`ProcessType`) | Accepted |
+| [ADR-005](adr-005-process-versioning.md) | Process Versioning (`ProcessVersion`) | Accepted |
+| [ADR-006](adr-006-process-state.md) | Process State Design (`IProcessState`) | Accepted |
+| [ADR-007](adr-007-process-instance.md) | Process Instance Record (`ProcessInstance`) | Accepted |
+| [ADR-008](adr-008-correlation-model.md) | Correlation Model (`CorrelationId`, `CausationId`) | Accepted |
 
 ---
 
@@ -25,10 +25,10 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-009](ADR-009-persistence-boundary.md) | Persistence Boundary (`IProcessStore`) | Accepted |
-| [ADR-010](ADR-010-optimistic-concurrency.md) | Optimistic Concurrency Control (OCC/CAS via `Revision`) | Accepted |
-| [ADR-011](ADR-011-idempotency-boundary.md) | Idempotency Boundary | Accepted |
-| [ADR-040](ADR-040-multi-database-storage-dialects.md) | Multi-Database Storage Dialect Architecture | Accepted |
+| [ADR-009](adr-009-persistence-boundary.md) | Persistence Boundary (`IProcessStore`) | Accepted |
+| [ADR-010](adr-010-optimistic-concurrency.md) | Optimistic Concurrency Control (OCC/CAS via `Revision`) | Accepted |
+| [ADR-011](adr-011-idempotency-boundary.md) | Idempotency Boundary | Accepted |
+| [ADR-040](adr-040-multi-database-storage-dialects.md) | Multi-Database Storage Dialect Architecture | Accepted |
 
 ---
 
@@ -36,12 +36,13 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-012](ADR-012-compensation-model.md) | Compensation Model (LIFO Reverse-Order) | Accepted |
-| [ADR-013](ADR-013-retry-boundary.md) | Retry Boundary | Accepted |
-| [ADR-014](ADR-014-timeout-boundary.md) | Timeout Boundary | Accepted |
-| [ADR-015](ADR-015-scheduling-boundary.md) | Scheduling Boundary | Accepted |
-| [ADR-035](ADR-035-saga-compensation-engine-visibility.md) | Saga Compensation Engine Visibility | Accepted |
-| [REJECT-010](REJECT-010-saga-orchestration-in-mediator-pipelines.md) | Saga Orchestration in Mediator Pipelines | Rejected |
+| [ADR-012](adr-012-compensation-model.md) | Compensation Model (LIFO Reverse-Order) | Accepted |
+| [ADR-013](adr-013-retry-boundary.md) | Retry Boundary | Accepted |
+| [ADR-014](adr-014-timeout-boundary.md) | Timeout Boundary | Accepted |
+| [ADR-015](adr-015-scheduling-boundary.md) | Scheduling Boundary | Accepted |
+| [ADR-035](adr-035-saga-compensation-engine-visibility.md) | Saga Compensation Engine Visibility | Accepted |
+| [ADR-041](adr-041-exception-taxonomy-vs-result-model.md) | Exception Taxonomy vs. Result Model Boundary | Accepted |
+| [REJECT-010](reject-010-saga-orchestration-in-mediator-pipelines.md) | Saga Orchestration in Mediator Pipelines | Rejected |
 
 ---
 
@@ -49,10 +50,10 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-016](ADR-016-aot-strategy.md) | Native AOT Strategy | Accepted |
-| [ADR-017](ADR-017-trimming-strategy.md) | Trimming Strategy | Accepted |
-| [ADR-029](ADR-029-performance.md) | Performance Design | Accepted |
-| [ADR-032](ADR-032-span-parsable-identifiers.md) | Span-Parsable Identifiers | Accepted |
+| [ADR-016](adr-016-aot-strategy.md) | Native AOT Strategy | Accepted |
+| [ADR-017](adr-017-trimming-strategy.md) | Trimming Strategy | Accepted |
+| [ADR-029](adr-029-performance.md) | Performance Design | Accepted |
+| [ADR-032](adr-032-span-parsable-identifiers.md) | Span-Parsable Identifiers | Accepted |
 
 ---
 
@@ -60,7 +61,7 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-019](ADR-019-serialization-boundary.md) | Serialization Boundary | Accepted |
+| [ADR-019](adr-019-serialization-boundary.md) | Serialization Boundary | Accepted |
 
 ---
 
@@ -68,8 +69,8 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-018](ADR-018-source-generator.md) | Roslyn Source Generator | Accepted |
-| [ADR-038](ADR-038-source-generator-di-extension.md) | Source Generator DI Extension (`AddGeneratedProcesses`) | Accepted |
+| [ADR-018](adr-018-source-generator.md) | Roslyn Source Generator | Accepted |
+| [ADR-038](adr-038-source-generator-di-extension.md) | Source Generator DI Extension (`AddGeneratedProcesses`) | Accepted |
 
 ---
 
@@ -77,10 +78,10 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-020](ADR-020-outbox-integration.md) | Outbox Integration | Accepted |
-| [ADR-021](ADR-021-events-integration.md) | Events Integration | Accepted |
-| [ADR-022](ADR-022-mediator-integration.md) | Mediator Integration | Accepted |
-| [ADR-039](ADR-039-mediator-dispatcher-payload-contract.md) | Mediator Dispatcher Payload Contract | Accepted |
+| [ADR-020](adr-020-outbox-integration.md) | Outbox Integration | Accepted |
+| [ADR-021](adr-021-events-integration.md) | Events Integration | Accepted |
+| [ADR-022](adr-022-mediator-integration.md) | Mediator Integration | Accepted |
+| [ADR-039](adr-039-mediator-dispatcher-payload-contract.md) | Mediator Dispatcher Payload Contract | Accepted |
 
 ---
 
@@ -88,9 +89,9 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-023](ADR-023-sharedkernel-boundary.md) | Shared Kernel Boundary | Accepted |
-| [ADR-024](ADR-024-package-structure.md) | Package Structure | Accepted |
-| [ADR-025](ADR-025-target-frameworks.md) | Target Frameworks | Accepted |
+| [ADR-023](adr-023-sharedkernel-boundary.md) | Shared Kernel Boundary | Accepted |
+| [ADR-024](adr-024-package-structure.md) | Package Structure | Accepted |
+| [ADR-025](adr-025-target-frameworks.md) | Target Frameworks | Accepted |
 
 ---
 
@@ -98,10 +99,10 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-026](ADR-026-state-migration.md) | State Migration | Accepted |
-| [ADR-027](ADR-027-version-coexistence.md) | Version Coexistence | Accepted |
-| [ADR-033](ADR-033-state-migration-pipeline.md) | State Migration Pipeline | Accepted |
-| [ADR-037](ADR-037-typed-payloads-roadmap-v3.md) | Typed Payloads Roadmap (v3) | Accepted |
+| [ADR-026](adr-026-state-migration.md) | State Migration | Accepted |
+| [ADR-027](adr-027-version-coexistence.md) | Version Coexistence | Accepted |
+| [ADR-033](adr-033-state-migration-pipeline.md) | State Migration Pipeline | Accepted |
+| [ADR-037](adr-037-typed-payloads-roadmap-v3.md) | Typed Payloads Roadmap (v3) | Accepted |
 
 ---
 
@@ -109,7 +110,7 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-028](ADR-028-observability.md) | Observability (OpenTelemetry) | Accepted |
+| [ADR-028](adr-028-observability.md) | Observability (OpenTelemetry) | Accepted |
 
 ---
 
@@ -117,7 +118,7 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-030](ADR-030-coordinator-options.md) | Coordinator Options | Accepted |
+| [ADR-030](adr-030-coordinator-options.md) | Coordinator Options | Accepted |
 
 ---
 
@@ -125,8 +126,8 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-031](ADR-031-testing-package.md) | Testing Package (`InMemoryProcessStore`) | Accepted |
-| [ADR-034](ADR-034-test-naming-osherove-ide1006.md) | Test Naming Convention (Osherove + IDE1006) | Accepted |
+| [ADR-031](adr-031-testing-package.md) | Testing Package (`InMemoryProcessStore`) | Accepted |
+| [ADR-034](adr-034-test-naming-osherove-ide1006.md) | Test Naming Convention (Osherove + IDE1006) | Accepted |
 
 ---
 
@@ -134,4 +135,4 @@ This index documents all Architecture Decision Records (ADRs) for the `EricksonL
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| [ADR-036](ADR-036-get-by-correlation-id-default-interface-method.md) | GetByCorrelationId Default Interface Method | Accepted |
+| [ADR-036](adr-036-get-by-correlation-id-default-interface-method.md) | GetByCorrelationId Default Interface Method | Accepted |

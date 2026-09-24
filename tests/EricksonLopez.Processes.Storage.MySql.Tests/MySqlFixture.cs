@@ -39,7 +39,7 @@ public sealed class MySqlFixture : IAsyncLifetime
                 created_at VARCHAR(35) NOT NULL,
                 updated_at VARCHAR(35) NOT NULL,
                 completed_at VARCHAR(35) NULL,
-                INDEX idx_process_instances_correlation_id (correlation_id)
+                UNIQUE INDEX idx_process_instances_correlation_id (correlation_id)
             );
             """;
 

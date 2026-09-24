@@ -15,15 +15,18 @@ using EricksonLopez.Processes.Abstractions;
 public sealed class MediatorProcessDispatcher : IMediatorProcessDispatcher
 {
     private readonly IMediator _mediator;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MediatorProcessDispatcher"/> class with the specified mediator.
     /// </summary>
     /// <param name="mediator">The mediator instance.</param>
+    /// <param name="timeProvider">An optional <see cref="TimeProvider"/> for controlling delay scheduling.</param>
     /// <exception cref="ArgumentNullException"><paramref name="mediator"/> is <see langword="null"/></exception>
-    public MediatorProcessDispatcher(IMediator mediator)
+    public MediatorProcessDispatcher(IMediator mediator, TimeProvider? timeProvider = null)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -87,7 +90,12 @@ public sealed class MediatorProcessDispatcher : IMediatorProcessDispatcher
                 {
                     if (timeout.TimeoutTrigger is INotification notification)
                     {
-                        await _mediator.Publish(notification, cancellationToken);
+                        if (timeout.Delay > TimeSpan.Zero)
+                        {
+                            await Task.Delay(timeout.Delay, _timeProvider, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        await _mediator.Publish(notification, cancellationToken).ConfigureAwait(false);
                     }
                     else
                     {

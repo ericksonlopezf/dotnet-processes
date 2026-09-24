@@ -29,16 +29,16 @@ Consolidated technical roadmap and architectural milestone plan for the `Erickso
 │  Phase 2: Performance & Allocation Hardening (v1.0.0-rc2) [COMPLETED]       │
 │    └─ BenchmarkDotNet Baselines, Zero-alloc Hotpath, ISpanParsable IDs      │
 │                                                                             │
-│  Phase 3: Ecosystem Samples & Integration Guides (v1.0.0-final) [COMPLETED] │
+│  Phase 3: Ecosystem Samples & Integration Guides (v1.0.0) [COMPLETED]       │
 │    └─ Dapper/PostgreSQL Store, Outbox Integration, Clean Documentation      │
 │                                                                             │
-│  Phase 4: Schema Evolution & Versioning Extensions (v1.1.0) [COMPLETED]     │
+│  Phase 4: Schema Evolution & Versioning Extensions (v1.0.0) [COMPLETED]     │
 │    └─ Automated Migrator Pipelines, Multi-version Coexistence Samples       │
 │                                                                             │
-│  Phase 5: Competitive Parity & Storage Dialects Expansion [COMPLETED]       │
+│  Phase 5: Competitive Parity & Storage Dialects Expansion (v1.0.0)[COMPLETED]│
 │    └─ Source Generator DI Extension, SQLite/MySQL/MariaDB/Oracle Adapters   │
 │                                                                             │
-│  Phase 6: AOT Hardening & Type Safety (v2.0.0) [PLANNED]                   │
+│  Phase 6: AOT Hardening & Type Safety (v2.0.0 Target) [PLANNED]             │
 │    └─ Typed ProcessEffect payloads, CompensationStep<TPayload>, SemVer Major│
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -49,58 +49,51 @@ Consolidated technical roadmap and architectural milestone plan for the `Erickso
 
 ### Phase 0 — Architectural Baseline & Invariants
 - **Status**: `COMPLETED`
-- **Focus**: Pure domain abstractions, Roslyn Source Generator, OCC CAS retry loop, 100% test coverage, and benchmark baselines.
 - **Deliverables**:
-  - `EricksonLopez.Processes.Abstractions` and `EricksonLopez.Processes` runtime.
-  - Zero compilation warnings (`TreatWarningsAsErrors=true`).
-  - Compile-time Roslyn Incremental Generator (`ProcessSourceGenerator`).
-  - Native OpenTelemetry telemetry instrumentation with `ActivitySource` and `Meter`.
+  - Zero-dependency abstractions package (`EricksonLopez.Processes.Abstractions`).
+  - Core coordinator runtime with optimistic concurrency control (`ProcessCoordinator<TState>`).
+  - Roslyn Incremental Source Generator (`ProcessSourceGenerator`) for zero-reflection discovery.
+  - Native telemetry instrumentation with `ActivitySource` and `Meter`.
+  - 100% unit, architecture, and trim test suite pass rate.
 
-### Phase 1 — Package & API Polish (v1.0.0-rc1)
+### Phase 1 — Package Structure & Testing SDK
 - **Status**: `COMPLETED`
-- **Focus**: Public API stability, testing doubles, and explicit intent hierarchy.
 - **Deliverables**:
-  - `ProcessCoordinatorOptions` for decoupled retry and backoff configuration (ADR-030).
-  - Dedicated `EricksonLopez.Processes.Testing` package with thread-safe `InMemoryProcessStore<TState>` (ADR-031).
-  - Purified `ProcessEffect` hierarchy (Command, Event, ScheduleTimeout, Compensation).
-  - Centralized `ProcessCoordinator.CompensateAsync<TSaga>` for orchestrated saga rollback (ADR-035).
+  - `ProcessCoordinatorOptions` for configurable retry loops and exponential backoff policies (ADR-030).
+  - Dedicated testing package (`EricksonLopez.Processes.Testing`) featuring `InMemoryProcessStore<TState>` with atomic CAS semantics (ADR-031).
+  - Purified `ProcessEffect` hierarchy as immutable data records (Command, Event, ScheduleTimeout, Compensation).
+  - Centralized `ProcessCoordinator.CompensateAsync<TSaga>` for orchestrated rollback (ADR-035).
 
-### Phase 2 — Performance & Allocation Hardening (v1.0.0-rc2)
+### Phase 2 — Performance Hardening & Span Parsing
 - **Status**: `COMPLETED`
-- **Focus**: Micro-allocation elimination in hotpaths and span formatting.
 - **Deliverables**:
-  - Zero-allocation telemetry using `System.Diagnostics.TagList` and `ActivitySource.HasListeners()` checks.
-  - Implemented `ISpanParsable<TSelf>` and `ISpanFormattable` across all identifier structs (ADR-032).
-  - BenchmarkDotNet baseline report published in `docs/benchmarks/results.md`.
+  - Implemented `ISpanParsable<TSelf>` and `ISpanFormattable` across all identifier value objects (ADR-032).
+  - Zero-allocation telemetry via `System.Diagnostics.TagList` and `ActivitySource.HasListeners()` checks.
+  - Formal BenchmarkDotNet baseline reports (>800k ops/sec in-memory throughput).
 
-### Phase 3 — Ecosystem Integration & Reference Samples (v1.0.0-final)
+### Phase 3 — Ecosystem Integration & Reference Samples
 - **Status**: `COMPLETED`
-- **Focus**: Integration bridges and comprehensive developer documentation.
 - **Deliverables**:
-  - PostgreSQL + Dapper technical persistence guide (`docs/guides/postgresql-dapper-store.md`).
-  - Outbox and EventBus integration guide (`docs/guides/outbox-eventbus-integration.md`).
-  - Runnable reference samples in `samples/`.
+  - Integration bridges for `EricksonLopez.Outbox`, `EricksonLopez.Mediator`, and `EricksonLopez.Events.Contracts`.
+  - Comprehensive reference showcase (`samples/EricksonLopez.Processes.Showcase`) spanning 11 progressive learning levels.
 
-### Phase 4 — Schema Evolution & Versioning Extensions (v1.1.0)
+### Phase 4 — Schema Migration Pipelines
 - **Status**: `COMPLETED`
-- **Focus**: Sequential state migration during instance hydration.
 - **Deliverables**:
-  - `ProcessStateMigrationPipeline` with fluent pipeline builder for V1 -> V2 -> V3 transformations (ADR-033).
-  - Stepwise migration test coverage.
+  - `ProcessStateMigrationPipeline` with fluent pipeline builder for sequential multi-version upgrades (V1 -> V2 -> V3) during instance hydration (ADR-033).
+  - Stepwise state migration unit test coverage.
 
-### Phase 5 — Competitive Parity & Storage Dialects Expansion
+### Phase 5 — Storage Expansion & Source Generator DI
 - **Status**: `COMPLETED`
-- **Focus**: Expanding persistence options, compile-time DI extensions, and resolving audit gaps.
 - **Deliverables**:
-  - Extended `ProcessSourceGenerator` emitting `GeneratedProcessRegistryExtensions.g.cs` with `AddGeneratedProcesses(IServiceCollection)` (ADR-038).
-  - Production-ready ADO.NET storage providers for SQLite, MySQL, MariaDB, and Oracle with atomic CAS semantics (ADR-040).
+  - Extended `ProcessSourceGenerator` to generate `AddGeneratedProcesses(IServiceCollection)` DI extensions at compile time (ADR-038).
+  - Production-ready ADO.NET storage providers for PostgreSQL, SQL Server, SQLite, MySQL, MariaDB, and Oracle with atomic CAS (ADR-040).
   - Enhanced `MediatorProcessDispatcher` with unrecognized payload callbacks and type-safe helpers (ADR-039).
 
-### Phase 6 — AOT Hardening & Type Safety (v2.0.0 Target)
+### Phase 6 — AOT Payload Type-Safety (v2.0.0 Target)
 - **Status**: `PLANNED`
-- **SemVer**: Major Breaking Release
-- **Focus**: Resolving AOT safety and type erasure in effect and compensation payloads.
-- **Planned Changes**:
-  - Replace `object` payload in `CompensationStep` with structured `System.Text.Json.JsonElement` or generic payload contracts.
-  - Introduce typed effect variants `ProcessEffect.TypedCommand<T>` and `ProcessEffect.TypedEvent<T>`.
-  - Promote `IProcessStore<TState>.GetByCorrelationIdAsync` from a default interface method to a required abstract interface method.
+- **Target SemVer**: Major Release
+- **Planned Enhancements**:
+  - Eliminate `object` type erasure in `CompensationStep.Payload` by introducing structured `JsonElement` / typed payload contracts.
+  - Provide generic typed variants `ProcessEffect.TypedCommand<T>` and `ProcessEffect.TypedEvent<T>` for compile-time AOT serialization guarantees.
+  - Promote `IProcessStore<TState>.GetByCorrelationIdAsync` from a default interface method to a mandatory abstract interface method.

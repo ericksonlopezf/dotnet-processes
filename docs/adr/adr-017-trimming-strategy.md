@@ -1,5 +1,11 @@
 # ADR-017: Trimming Strategy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 When publishing applications with `PublishTrimmed=true`, the .NET IL trimmer strips unused metadata, classes, and members. Libraries that rely on unannotated reflection or dynamic type lookups break silently at runtime.
 

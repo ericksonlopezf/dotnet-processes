@@ -89,6 +89,11 @@ public static class Level04MediatorIntegrationDemo
         Console.WriteLine("================================================================================");
         Console.ResetColor();
 
+        // 0. Demonstrate DI registration
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddProcessesMediator();
+        Console.WriteLine("Registered AddProcessesMediator() in DI.");
+
         var mediator = new InMemoryMediator();
         var dispatcher = new MediatorProcessDispatcher(mediator);
         var processId = ProcessId.NewId();
@@ -102,11 +107,15 @@ public static class Level04MediatorIntegrationDemo
         {
             ProcessEffect.CreateCommand(new ProcessCommand("ProvisionTenantResource", processId.Value)),
             ProcessEffect.CreateEvent(new ProcessNotification("TenantResourceProvisioned", processId.Value)),
-            ProcessEffect.CreateTimeout(TimeSpan.FromMinutes(10), new ProcessNotification("ProvisioningTimeout", processId.Value))
+            ProcessEffect.CreateTimeout(TimeSpan.FromMilliseconds(10), new ProcessNotification("ProvisioningTimeout", processId.Value))
         };
 
-        Console.WriteLine($"Dispatching {effects.Length} ProcessEffects via MediatorProcessDispatcher...");
+        // 1. Dispatch single effect via DispatchEffectAsync
+        await dispatcher.DispatchEffectAsync(effects[0], processId);
+        Console.WriteLine("Dispatched single effect via DispatchEffectAsync.");
 
+        // 2. Dispatch all effects via DispatchEffectsAsync
+        Console.WriteLine($"Dispatching {effects.Length} ProcessEffects via MediatorProcessDispatcher...");
         await dispatcher.DispatchEffectsAsync(effects, processId);
 
         Console.WriteLine();

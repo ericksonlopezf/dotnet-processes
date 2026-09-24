@@ -1,7 +1,10 @@
 # ADR-036: GetByCorrelationIdAsync as Default Interface Method in IProcessStore
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

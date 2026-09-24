@@ -1,5 +1,11 @@
 # ADR-019: Serialization Boundary and System.Text.Json Integration
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Process state must be serialized to byte arrays, strings, or JSON documents for persistence in databases.
 

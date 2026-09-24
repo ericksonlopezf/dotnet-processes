@@ -18,6 +18,7 @@ public sealed class ProcessCoordinator<TState>
 {
     private readonly IProcessStore<TState> _store;
     private readonly int _maxConcurrencyRetries;
+    private readonly int _maxCompensations;
     private readonly TimeProvider _timeProvider;
     private readonly Func<int, TimeSpan> _backoffStrategy;
 
@@ -38,17 +39,23 @@ public sealed class ProcessCoordinator<TState>
         _store = store ?? throw new ArgumentNullException(nameof(store));
         var opt = options ?? new ProcessCoordinatorOptions();
         _maxConcurrencyRetries = Math.Max(0, opt.MaxConcurrencyRetries);
+        _maxCompensations = Math.Max(0, opt.MaxCompensations);
         _timeProvider = timeProvider ?? TimeProvider.System;
         _backoffStrategy = backoffStrategy ?? (attempt => TimeSpan.FromMilliseconds(opt.InitialBackoffDelay.TotalMilliseconds * attempt));
     }
 
     /// <summary>
-    /// Calculates a linear backoff delay of 10 milliseconds per retry attempt.
+    /// Calculates an exponential backoff delay with pseudo-random jitter.
     /// </summary>
     /// <param name="attempt">The retry attempt index.</param>
     /// <returns>The calculated backoff <see cref="TimeSpan"/> duration.</returns>
-    public static TimeSpan DefaultBackoffStrategy(int attempt) =>
-        TimeSpan.FromMilliseconds(10 * attempt);
+    public static TimeSpan DefaultBackoffStrategy(int attempt)
+    {
+        var maxDelay = 1000;
+        var delay = Math.Min(50 * Math.Pow(2, attempt), maxDelay);
+        var jitter = System.Security.Cryptography.RandomNumberGenerator.GetInt32(0, 50);
+        return TimeSpan.FromMilliseconds(delay + jitter);
+    }
 
     /// <summary>
     /// Executes a process handler against the targeted process instance with optimistic concurrency retries.
@@ -62,6 +69,7 @@ public sealed class ProcessCoordinator<TState>
     /// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation.</param>
     /// <returns>A value task representing the asynchronous operation. The task result contains the <see cref="ProcessExecutionResult{TState}"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="handler"/>, <paramref name="correlation"/>, or <paramref name="eventMessage"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="initialStateFactory"/> is <see langword="null"/> when <paramref name="canInitiate"/> is <see langword="true"/></exception>
     /// <exception cref="ProcessNotFoundException">The process instance was not found and <paramref name="canInitiate"/> is <see langword="false"/></exception>
     /// <exception cref="ConcurrencyConflictException">Optimistic concurrency retries exceeded the configured maximum limit</exception>
     public async ValueTask<ProcessExecutionResult<TState>> ExecuteAsync<TEvent>(
@@ -75,6 +83,11 @@ public sealed class ProcessCoordinator<TState>
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentNullException.ThrowIfNull(correlation);
         ArgumentNullException.ThrowIfNull(eventMessage);
+
+        if (canInitiate && initialStateFactory == null)
+        {
+            throw new ArgumentNullException(nameof(initialStateFactory), "Initial state factory is required when canInitiate is true.");
+        }
 
         var processId = correlation.ExtractProcessId(eventMessage);
         var correlationId = correlation.ExtractCorrelationId(eventMessage);
@@ -99,33 +112,50 @@ public sealed class ProcessCoordinator<TState>
         var attempt = 0;
         var stopwatch = Stopwatch.StartNew();
 
+        var context = new ProcessContext(
+            processId: processId,
+            correlationId: correlationId,
+            causationId: causationId,
+            messageId: messageId,
+            now: _timeProvider.GetUtcNow(),
+            timeProvider: _timeProvider,
+            cancellationToken: cancellationToken);
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var (instance, shouldExitEarly) = await ResolveInstanceAsync(
+            var (instance, resolution) = await ResolveInstanceAsync(
                 processId, correlationId, handler, eventMessage, initialStateFactory, canInitiate, cancellationToken);
 
-            if (shouldExitEarly)
+            if (resolution == InstanceResolution.Terminal)
             {
                 return new ProcessExecutionResult<TState>(instance, Array.Empty<ProcessEffect>(), ProcessSaveResult.Success);
             }
 
-            var context = new ProcessContext(
-                processId: processId,
-                correlationId: correlationId,
-                causationId: causationId,
-                messageId: messageId,
-                now: _timeProvider.GetUtcNow(),
-                timeProvider: _timeProvider,
-                cancellationToken: cancellationToken);
+            if (resolution == InstanceResolution.New)
+            {
+                var initialSaveResult = await _store.SaveAsync(instance, cancellationToken);
+                if (initialSaveResult != ProcessSaveResult.Success)
+                {
+                    if (initialSaveResult == ProcessSaveResult.ConcurrencyConflict)
+                    {
+                        attempt = await HandleConcurrencyRetryAsync(processType, processVersion, processId, instance.Revision, attempt, cancellationToken);
+                        continue;
+                    }
+
+                    return new ProcessExecutionResult<TState>(instance, Array.Empty<ProcessEffect>(), initialSaveResult);
+                }
+            }
 
             var transitionResult = await handler.HandleAsync(instance.State, eventMessage, context);
 
             var updatedInstance = instance.Advance(
                 newState: transitionResult.State,
                 newStatus: transitionResult.Status,
-                now: _timeProvider.GetUtcNow());
+                now: _timeProvider.GetUtcNow(),
+                newCompensations: transitionResult.RecordedCompensations,
+                maxCompensations: _maxCompensations);
 
             var saveResult = await _store.SaveAsync(updatedInstance, cancellationToken);
 
@@ -147,7 +177,14 @@ public sealed class ProcessCoordinator<TState>
         }
     }
 
-    private async ValueTask<(ProcessInstance<TState> Instance, bool ShouldExitEarly)> ResolveInstanceAsync<TEvent>(
+    private enum InstanceResolution
+    {
+        New,
+        Existing,
+        Terminal
+    }
+
+    private async ValueTask<(ProcessInstance<TState> Instance, InstanceResolution Resolution)> ResolveInstanceAsync<TEvent>(
         ProcessId processId,
         CorrelationId correlationId,
         IProcessHandler<TState, TEvent> handler,
@@ -159,13 +196,14 @@ public sealed class ProcessCoordinator<TState>
         var instance = await _store.GetByIdAsync(processId, cancellationToken);
         if (instance is null)
         {
-            if (!canInitiate || initialStateFactory is null)
+            if (!canInitiate)
             {
                 throw new ProcessNotFoundException(
-                    $"Process '{handler.Type.Value}' with ID '{processId}' not found and incoming message cannot initiate it.");
+                    $"Process '{handler.Type.Value}' with ID '{processId}' not found and incoming message cannot initiate it.",
+                    processId);
             }
 
-            var initialState = initialStateFactory(eventMessage);
+            var initialState = initialStateFactory!(eventMessage);
             var created = ProcessInstance<TState>.Create(
                 id: processId,
                 type: handler.Type,
@@ -175,15 +213,15 @@ public sealed class ProcessCoordinator<TState>
                 now: _timeProvider.GetUtcNow());
 
             ProcessDiagnostics.RecordProcessStarted(handler.Type.Value, handler.Version.Value);
-            return (created, false);
+            return (created, InstanceResolution.New);
         }
 
         if (instance.Status is ProcessStatus.Completed or ProcessStatus.Compensated or ProcessStatus.Failed)
         {
-            return (instance, true);
+            return (instance, InstanceResolution.Terminal);
         }
 
-        return (instance, false);
+        return (instance, InstanceResolution.Existing);
     }
 
     private static ProcessExecutionResult<TState> HandleSuccessSave(
@@ -235,6 +273,34 @@ public sealed class ProcessCoordinator<TState>
     }
 
     /// <summary>
+    /// Executes reverse-order compensation steps for a saga using optimistic concurrency control, automatically reading recorded compensation steps from the persisted process instance.
+    /// </summary>
+    /// <typeparam name="TSaga">The saga definition and compensation handler type.</typeparam>
+    /// <param name="processId">The unique process identifier of the saga to compensate.</param>
+    /// <param name="saga">The saga instance providing compensation logic.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A value task representing the asynchronous operation. The task result contains the <see cref="ProcessExecutionResult{TState}"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="saga"/> is <see langword="null"/></exception>
+    /// <exception cref="ProcessNotFoundException">The process instance was not found in storage</exception>
+    /// <exception cref="ConcurrencyConflictException">Optimistic concurrency retries exceeded the configured maximum limit</exception>
+    public async ValueTask<ProcessExecutionResult<TState>> CompensateAsync<TSaga>(
+        ProcessId processId,
+        TSaga saga,
+        CancellationToken cancellationToken = default)
+        where TSaga : IProcess<TState>, ICompensationHandler<TState>
+    {
+        ArgumentNullException.ThrowIfNull(saga);
+
+        var instance = await _store.GetByIdAsync(processId, cancellationToken);
+        if (instance is null)
+        {
+            throw new ProcessNotFoundException($"Process '{saga.Type.Value}' with ID '{processId}' not found for compensation.", processId);
+        }
+
+        return await CompensateAsync(processId, instance.RecordedCompensations, saga, cancellationToken);
+    }
+
+    /// <summary>
     /// Executes reverse-order compensation steps for a saga using optimistic concurrency control.
     /// </summary>
     /// <typeparam name="TSaga">The saga definition and compensation handler type.</typeparam>
@@ -245,7 +311,6 @@ public sealed class ProcessCoordinator<TState>
     /// <returns>A value task representing the asynchronous operation. The task result contains the <see cref="ProcessExecutionResult{TState}"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="recordedSteps"/> or <paramref name="saga"/> is <see langword="null"/></exception>
     /// <exception cref="ProcessNotFoundException">The process instance was not found in storage</exception>
-    /// <exception cref="ConcurrencyConflictException">Optimistic concurrency retries exceeded the configured maximum limit</exception>
     public async ValueTask<ProcessExecutionResult<TState>> CompensateAsync<TSaga>(
         ProcessId processId,
         IReadOnlyList<CompensationStep> recordedSteps,
@@ -272,6 +337,9 @@ public sealed class ProcessCoordinator<TState>
 
         var attempt = 0;
         var stopwatch = Stopwatch.StartNew();
+        var causationId = CausationId.NewId();
+        var messageId = MessageId.NewId();
+        var accumulatedEffects = new List<ProcessEffect>();
 
         while (true)
         {
@@ -280,39 +348,76 @@ public sealed class ProcessCoordinator<TState>
             var instance = await _store.GetByIdAsync(processId, cancellationToken);
             if (instance is null)
             {
-                throw new ProcessNotFoundException($"Process '{saga.Type.Value}' with ID '{processId}' not found for compensation.");
+                throw new ProcessNotFoundException($"Process '{saga.Type.Value}' with ID '{processId}' not found for compensation.", processId);
             }
 
             if (instance.Status is ProcessStatus.Compensated or ProcessStatus.Failed)
             {
-                return new ProcessExecutionResult<TState>(instance, Array.Empty<ProcessEffect>(), ProcessSaveResult.Success);
+                return new ProcessExecutionResult<TState>(instance, accumulatedEffects, ProcessSaveResult.Success);
+            }
+
+            if (instance.RecordedCompensations is null || instance.RecordedCompensations.Count == 0)
+            {
+                var finalInstance = instance.AdvanceCompensation(instance.State, ProcessStatus.Compensated, _timeProvider.GetUtcNow());
+                var saveFinal = await _store.SaveAsync(finalInstance, cancellationToken);
+                if (saveFinal == ProcessSaveResult.ConcurrencyConflict)
+                {
+                    attempt = await HandleConcurrencyRetryAsync(processType, processVersion, processId, instance.Revision, attempt, cancellationToken);
+                    continue;
+                }
+                return HandleSuccessSave(processType, processVersion, finalInstance, ProcessTransitionResult<TState>.Compensated(finalInstance.State, accumulatedEffects), stopwatch);
             }
 
             var context = new ProcessContext(
                 processId: processId,
                 correlationId: instance.CorrelationId,
-                causationId: CausationId.NewId(),
-                messageId: MessageId.NewId(),
+                causationId: causationId,
+                messageId: messageId,
                 now: _timeProvider.GetUtcNow(),
                 timeProvider: _timeProvider,
                 cancellationToken: cancellationToken);
 
-            var transitionResult = await SagaCompensationEngine.ExecuteCompensationAsync(
+            var stepToCompensate = instance.RecordedCompensations[^1];
+
+            var transitionResult = await SagaCompensationEngine.ExecuteNextCompensationStepAsync(
                 instance.State,
-                recordedSteps,
+                stepToCompensate,
                 saga,
                 context);
 
-            var updatedInstance = instance.Advance(
+            var newStatus = transitionResult.Status;
+            if (newStatus != ProcessStatus.Failed)
+            {
+                newStatus = instance.RecordedCompensations.Count > 1
+                    ? ProcessStatus.Compensating
+                    : ProcessStatus.Compensated;
+            }
+
+            var updatedInstance = instance.AdvanceCompensation(
                 newState: transitionResult.State,
-                newStatus: transitionResult.Status,
+                newStatus: newStatus,
                 now: _timeProvider.GetUtcNow());
 
             var saveResult = await _store.SaveAsync(updatedInstance, cancellationToken);
 
             if (saveResult == ProcessSaveResult.Success)
             {
-                return HandleSuccessSave(processType, processVersion, updatedInstance, transitionResult, stopwatch);
+                accumulatedEffects.AddRange(transitionResult.Effects);
+
+                if (newStatus is ProcessStatus.Compensated or ProcessStatus.Failed)
+                {
+                    var finalTransition = new ProcessTransitionResult<TState>(
+                        state: updatedInstance.State,
+                        status: newStatus,
+                        effects: accumulatedEffects,
+                        failureReason: transitionResult.FailureReason);
+
+                    return HandleSuccessSave(processType, processVersion, updatedInstance, finalTransition, stopwatch);
+                }
+
+                // If Compensating, reset attempt for the next step and continue loop
+                attempt = 0;
+                continue;
             }
 
             if (saveResult == ProcessSaveResult.ConcurrencyConflict)
@@ -321,7 +426,7 @@ public sealed class ProcessCoordinator<TState>
                 continue;
             }
 
-            return new ProcessExecutionResult<TState>(updatedInstance, transitionResult.Effects, saveResult);
+            return new ProcessExecutionResult<TState>(updatedInstance, accumulatedEffects, saveResult);
         }
     }
 }

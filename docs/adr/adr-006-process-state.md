@@ -1,5 +1,11 @@
 # ADR-006: Process State Immutability and Schema Design
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Process state stores the intermediate business data and execution milestones of a long-running workflow.
 

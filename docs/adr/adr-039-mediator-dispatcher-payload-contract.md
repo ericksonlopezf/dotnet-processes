@@ -1,7 +1,10 @@
 # ADR-039: MediatorProcessDispatcher Explicit Payload Dispatch Contract
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

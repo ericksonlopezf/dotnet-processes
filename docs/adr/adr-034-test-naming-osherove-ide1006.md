@@ -1,7 +1,10 @@
 # ADR-034: Osherove Test Naming Convention and Justified IDE1006 Suppression
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

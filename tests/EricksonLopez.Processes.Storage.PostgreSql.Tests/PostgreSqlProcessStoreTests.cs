@@ -281,19 +281,24 @@ public sealed class PostgreSqlProcessStoreTests : IClassFixture<PostgreSqlFixtur
     public void Constructor_InvalidArguments_ShouldThrowExpectedExceptions()
     {
         var actNullConn = () => new PostgreSqlProcessStore<SampleOrderState>(null!, _serializer);
-        actNullConn.Should().Throw<ArgumentException>();
+        actNullConn.Should().ThrowExactly<ArgumentNullException>().WithParameterName("connectionString");
 
         var actEmptyConn = () => new PostgreSqlProcessStore<SampleOrderState>("   ", _serializer);
-        actEmptyConn.Should().Throw<ArgumentException>();
+        actEmptyConn.Should().ThrowExactly<ArgumentException>().WithParameterName("connectionString");
 
         var actNullTable = () => new PostgreSqlProcessStore<SampleOrderState>(_fixture.ConnectionString, _serializer, tableName: null!);
-        actNullTable.Should().Throw<ArgumentException>();
+        actNullTable.Should().ThrowExactly<ArgumentNullException>().WithParameterName("tableName");
 
         var actEmptyTable = () => new PostgreSqlProcessStore<SampleOrderState>(_fixture.ConnectionString, _serializer, tableName: "  ");
-        actEmptyTable.Should().Throw<ArgumentException>();
+        actEmptyTable.Should().ThrowExactly<ArgumentException>().WithParameterName("tableName");
+
+        var actInvalidTable = () => new PostgreSqlProcessStore<SampleOrderState>(_fixture.ConnectionString, _serializer, tableName: "123_invalid!");
+        actInvalidTable.Should().ThrowExactly<ArgumentException>()
+            .WithParameterName("tableName")
+            .WithMessage("Invalid table name '123_invalid!'. Table names must match ^[a-zA-Z_][a-zA-Z0-9_]*$*");
 
         var actNullSerializer = () => new PostgreSqlProcessStore<SampleOrderState>(_fixture.ConnectionString, null!);
-        actNullSerializer.Should().Throw<ArgumentNullException>();
+        actNullSerializer.Should().ThrowExactly<ArgumentNullException>().WithParameterName("serializer");
 
         var customLogger = NullLogger<PostgreSqlProcessStore<SampleOrderState>>.Instance;
         var storeWithLogger = new PostgreSqlProcessStore<SampleOrderState>(_fixture.ConnectionString, _serializer, "process_instances", customLogger);

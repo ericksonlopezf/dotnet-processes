@@ -1,7 +1,10 @@
 # ADR-040: Multi-Database Storage Dialects (SQLite, MySQL, MariaDB, Oracle, SQL Server, PostgreSQL)
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

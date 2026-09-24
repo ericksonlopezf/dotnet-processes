@@ -237,6 +237,14 @@ public class StorageContractsAndExceptionsTests
         var exPid = new ProcessNotFoundException(pid);
         exPid.ProcessId.Should().Be(pid);
         exPid.Message.Should().Be($"Process instance with ID '{pid}' was not found in storage.");
+
+        var exMsgPid = new ProcessNotFoundException("custom msg", pid);
+        exMsgPid.ProcessId.Should().Be(pid);
+        exMsgPid.Message.Should().Be("custom msg");
+
+        var exMsgPidInner = new ProcessNotFoundException("custom msg", pid, inner);
+        exMsgPidInner.ProcessId.Should().Be(pid);
+        exMsgPidInner.InnerException.Should().BeSameAs(inner);
     }
 
     [Fact]

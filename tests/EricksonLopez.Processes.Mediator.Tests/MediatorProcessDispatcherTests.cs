@@ -269,15 +269,88 @@ public class MediatorProcessDispatcherTests
     }
 
     [Fact]
-    public async Task DispatchEffectAsync_ScheduleTimeoutEffect_WithNotification_PublishesNotificationViaMediator()
+    public async Task DispatchEffectAsync_ScheduleTimeoutEffect_WithPositiveDelay_AwaitsDelayBeforePublishingNotification()
     {
         // Arrange
-        var dispatcher = new MediatorProcessDispatcher(_mediator);
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var dispatcher = new MediatorProcessDispatcher(_mediator, fakeTime);
         var processId = ProcessId.NewId();
         var notif = new SampleProcessNotification("TimeoutTriggered");
-        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.FromMinutes(5), notif);
+        var delay = TimeSpan.FromSeconds(10);
+        var effect = new ProcessEffect.ScheduleTimeout(delay, notif);
         using var cts = new CancellationTokenSource();
         var ct = cts.Token;
+
+        // Act
+        var task = dispatcher.DispatchEffectAsync(effect, processId, ct).AsTask();
+
+        // Assert: Before time advances, delay is active and notification has NOT been published
+        task.IsCompleted.Should().BeFalse();
+        await _mediator.DidNotReceiveWithAnyArgs().Publish(default(INotification)!, default);
+
+        // Advance time to trigger timeout
+        fakeTime.Advance(delay);
+        await task.WaitAsync(TimeSpan.FromSeconds(2));
+        task.IsCompleted.Should().BeTrue();
+
+        // Assert: After time advances, notification is published
+        await _mediator.Received(1).Publish(
+            Arg.Is<SampleProcessNotification>(n => ReferenceEquals(n, notif)),
+            ct);
+        await _mediator.DidNotReceiveWithAnyArgs().Send(default(ICommand<bool>)!, default);
+    }
+
+    [Fact]
+    public async Task DispatchEffectAsync_ScheduleTimeoutEffect_WithZeroDelay_PublishesImmediatelyWithoutDelay()
+    {
+        // Arrange
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var dispatcher = new MediatorProcessDispatcher(_mediator, fakeTime);
+        var processId = ProcessId.NewId();
+        var notif = new SampleProcessNotification("TimeoutImmediate");
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.Zero, notif);
+
+        // Act
+        var task = dispatcher.DispatchEffectAsync(effect, processId);
+
+        // Assert: Completes immediately without needing time to advance
+        task.IsCompleted.Should().BeTrue();
+        await _mediator.Received(1).Publish(
+            Arg.Is<SampleProcessNotification>(n => ReferenceEquals(n, notif)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchEffectAsync_ScheduleTimeoutEffect_WithExactlyZeroDelay_CompletesImmediatelyWithoutAdvancingTime()
+    {
+        // This test specifically kills the mutant: `timeout.Delay >= TimeSpan.Zero`
+        // With the mutant, TimeSpan.Zero would enter `await Task.Delay(...)` path.
+        // Using FakeTimeProvider that is never advanced, the task would only complete
+        // if time is advanced. The test verifies the task completes WITHOUT advancing time.
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var dispatcher = new MediatorProcessDispatcher(_mediator, fakeTime);
+        var processId = ProcessId.NewId();
+        var notif = new SampleProcessNotification("ZeroBoundary");
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.Zero, notif);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await dispatcher.DispatchEffectAsync(effect, processId, cts.Token);
+
+        await _mediator.Received(1).Publish(
+            Arg.Is<SampleProcessNotification>(n => ReferenceEquals(n, notif)),
+            Arg.Is<CancellationToken>(c => c == cts.Token));
+    }
+
+    [Fact]
+    public async Task DispatchEffectAsync_ScheduleTimeoutEffect_WithZeroDelayAndCanceledToken_DoesNotInvokeDelayAndProceedsToMediator()
+    {
+        // Arrange: A canceled token causes Task.Delay(TimeSpan.Zero, ct) to throw immediately.
+        // If timeout.Delay > TimeSpan.Zero is correctly evaluated, Task.Delay is skipped and mediator receives the invocation.
+        var dispatcher = new MediatorProcessDispatcher(_mediator);
+        var processId = ProcessId.NewId();
+        var notif = new SampleProcessNotification("TimeoutCanceled");
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.Zero, notif);
+        var ct = new CancellationToken(canceled: true);
 
         // Act
         await dispatcher.DispatchEffectAsync(effect, processId, ct);
@@ -286,7 +359,44 @@ public class MediatorProcessDispatcherTests
         await _mediator.Received(1).Publish(
             Arg.Is<SampleProcessNotification>(n => ReferenceEquals(n, notif)),
             ct);
-        await _mediator.DidNotReceiveWithAnyArgs().Send(default(ICommand<bool>)!, default);
+    }
+
+    [Fact]
+    public async Task DispatchEffectAsync_ScheduleTimeoutEffect_WithNegativeDelay_PublishesImmediatelyWithoutThrowing()
+    {
+        // Arrange
+        var fakeTime = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        var dispatcher = new MediatorProcessDispatcher(_mediator, fakeTime);
+        var processId = ProcessId.NewId();
+        var notif = new SampleProcessNotification("TimeoutNegative");
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.FromSeconds(-5), notif);
+
+        // Act
+        var task = dispatcher.DispatchEffectAsync(effect, processId);
+
+        // Assert: Completes immediately without invoking Task.Delay with negative duration (which would throw)
+        task.IsCompleted.Should().BeTrue();
+        await _mediator.Received(1).Publish(
+            Arg.Is<SampleProcessNotification>(n => ReferenceEquals(n, notif)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Constructor_NullTimeProvider_DefaultsToSystemTimeProvider()
+    {
+        // Arrange
+        var dispatcher = new MediatorProcessDispatcher(_mediator, null);
+        var processId = ProcessId.NewId();
+        var notif = new SampleProcessNotification("TimeoutSystemTime");
+        var effect = new ProcessEffect.ScheduleTimeout(TimeSpan.FromMilliseconds(1), notif);
+
+        // Act
+        await dispatcher.DispatchEffectAsync(effect, processId);
+
+        // Assert
+        await _mediator.Received(1).Publish(
+            Arg.Is<SampleProcessNotification>(n => ReferenceEquals(n, notif)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

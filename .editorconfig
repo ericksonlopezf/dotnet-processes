@@ -69,13 +69,17 @@ dotnet_diagnostic.CA1707.severity = warning
 dotnet_diagnostic.IDE1006.severity = warning
 dotnet_diagnostic.CA1822.severity = suggestion
 
-# Documentation & XML Comments (CS1591, CS1570, etc.)
+# Documentation & XML Comments (CS1591, CS1570, CS1590, etc.)
 dotnet_diagnostic.CS1591.severity = warning
 dotnet_diagnostic.CS1570.severity = warning
 dotnet_diagnostic.CS1572.severity = warning
 dotnet_diagnostic.CS1573.severity = warning
 dotnet_diagnostic.CS1574.severity = warning
 dotnet_diagnostic.CS1587.severity = warning
+dotnet_diagnostic.CS1590.severity = warning
+
+# Control Flow & Language Invariants (CS0159, etc.)
+dotnet_diagnostic.CS0159.severity = error
 
 # xUnit Rules
 dotnet_diagnostic.xUnit1051.severity = warning

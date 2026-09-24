@@ -12,10 +12,10 @@ All contributors and maintainers are expected to abide by our [Code of Conduct](
 
 ## 2. Prerequisites & Environment Setup
 
-- **.NET SDK**: .NET 10.0 SDK (`net10.0`).
+- **.NET SDK**: .NET 10.0 SDK pinned to `10.0.100` via `global.json` (`rollForward: latestMinor`, `allowPrerelease: true`).
 - **C# Language Version**: C# Preview (`LangVersion=preview`).
-- **IDE**: Visual Studio 2022 / 2025, JetBrains Rider 2024.3+, or Visual Studio Code with the C# Dev Kit.
-- **Docker**: Required only for running database integration tests with Testcontainers.
+- **IDE**: Visual Studio 2022 / 2025, JetBrains Rider 2024.3+, or Visual Studio Code with C# Dev Kit.
+- **Docker**: Required only for running database integration tests with Testcontainers (`Storage.IntegrationTests`).
 
 ---
 
@@ -27,36 +27,52 @@ All contributors and maintainers are expected to abide by our [Code of Conduct](
 # Restore dependencies centrally
 dotnet restore EricksonLopez.Processes.slnx
 
-# Build the solution in Release configuration
+# Build the solution in Release configuration with zero warnings
 dotnet build EricksonLopez.Processes.slnx -c Release --no-restore
 ```
 
 ### Running Tests
 
 ```bash
-# Fast local TDD: Run unit, architecture, analyzer, and generator tests (skips slow containerized tests)
-./test-unit.ps1
-# Or equivalent dotnet CLI:
+# Fast local TDD: Run unit, architecture, analyzer, and generator tests (skips containerized DB tests)
 dotnet test EricksonLopez.Processes.slnx --filter "Category!=Integration"
 
-# Run the complete test suite (requires Docker active for Testcontainers)
+# Optional: Spin up all 5 relational database engines locally via Docker Compose
+docker compose -f docker-compose.test.yml up -d
+
+# Run the complete test suite including integration tests (requires Docker active for Testcontainers)
 dotnet test EricksonLopez.Processes.slnx -c Release
 ```
 
 ### Mutation Testing with Stryker
 
-The project enforces strict mutation score quality gates (`100%` target, `95%` break threshold):
+The project enforces strict mutation score quality gates defined in `stryker-*.json` (`100%` high target, `98%` low, `95%` break threshold):
 
 ```bash
-# Run Stryker mutation testing
+# Run Stryker mutation testing for core library
 dotnet stryker -c stryker-config.json
+
+# Or for specific package components (e.g. Abstractions, Outbox, Storage.PostgreSql)
+dotnet stryker -c stryker-abstractions-config.json
+dotnet stryker -c stryker-outbox-config.json
+```
+
+### Benchmark Regression Gate Policy
+
+Pull requests touching `src/**` or `benchmarks/**` execute the Benchmark Regression Gate workflow (`benchmark-regression-gate.yml`):
+- **Heap Invariant**: Zero-allocation on hotpath combinators (**0 B allocated**).
+- **Latency Threshold**: Mean execution latency regression must not exceed **5%** vs baseline (`benchmarks/results/baseline.json`).
+
+Run benchmarks locally:
+```bash
+dotnet run --project benchmarks/EricksonLopez.Processes.Benchmarks/EricksonLopez.Processes.Benchmarks.csproj -c Release --framework net10.0 -- --filter "*" --job short --memory
 ```
 
 ### Native AOT Publishing Validation
 
 ```bash
 # Validate that the Native AOT sample compiles cleanly with zero trim/AOT warnings
-dotnet publish samples/NativeAotSample/NativeAotSample.csproj -c Release -r win-x64 -p:PublishAot=true
+dotnet publish samples/NativeAotSample/NativeAotSample.csproj -c Release -r linux-x64 -p:PublishAot=true -p:TreatWarningsAsErrors=true
 ```
 
 ---
@@ -76,10 +92,13 @@ When writing or modifying code in this repository:
 ## 5. Branching & Commit Conventions
 
 ### Branch Strategy
-- `main`: Primary production and development branch.
+- `main`: Primary production release branch (protected).
+- `develop`: Primary integration and ongoing development branch.
 - Feature branches: `feat/<short-description>` or `feature/<short-description>`.
 - Bug fix branches: `fix/<issue-number>-<short-description>`.
 - Refactoring / Documentation: `docs/<topic>` or `refactor/<topic>`.
+
+Both `main` and `develop` trigger Continuous Integration (`ci.yml`) and Native AOT smoke testing on every push and pull request.
 
 ### Conventional Commits
 All commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
@@ -97,6 +116,7 @@ All commit messages must follow the [Conventional Commits](https://www.conventio
 Before submitting a Pull Request:
 
 1. Ensure the solution builds cleanly with **0 warnings** (`TreatWarningsAsErrors=true`).
-2. Verify that all unit and architecture tests pass (`./test-unit.ps1`).
+2. Verify that all unit and architecture tests pass (`dotnet test EricksonLopez.Processes.slnx --filter "Category!=Integration"`).
 3. If introducing or changing public APIs, update the corresponding documentation in `/docs/` and add test coverage.
-4. Fill out the [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md) completely.
+4. Verify that no trim or Native AOT warnings (`IL2026`, `IL3050`) are introduced.
+5. Fill out the [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md) completely.
