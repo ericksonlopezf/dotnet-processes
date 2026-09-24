@@ -1,5 +1,11 @@
 # ADR-026: Explicit State Migration Strategy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 As business workflows evolve, the stored state schema for a long-running process may change (e.g. adding required fields, restructuring data from `OrderStateV1` to `OrderStateV2`).
 

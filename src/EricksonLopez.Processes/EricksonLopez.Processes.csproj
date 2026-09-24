@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Core Process Manager and Saga execution engine, compensation runner, and correlation primitives for EricksonLopez.Processes.</Description>
-    <PackageTags>$(CommonPackageTags);execution-engine;state-machine;compensation;rollback;optimistic-concurrency;opentelemetry;native-aot;trimming</PackageTags>
+    <PackageTags>$(CommonPackageTags);execution-engine;workflow;state-machine;compensation;rollback;optimistic-concurrency;opentelemetry;native-aot;trimming</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

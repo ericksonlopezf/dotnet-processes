@@ -1,5 +1,11 @@
 # ADR-013: Retry Strategy Boundary
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Errors in distributed workflows fall into two distinct categories:
 1. **Technical / Transient Failures**: Network glitches, temporary database timeouts, broker partition rebalancing.

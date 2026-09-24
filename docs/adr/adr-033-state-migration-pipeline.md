@@ -1,7 +1,10 @@
 # ADR-033: Sequential State Schema Migration Pipeline
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

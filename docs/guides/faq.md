@@ -53,7 +53,7 @@ Distributed locks are fragile and introduce cluster-wide bottlenecks. Optimistic
 - **Scalable**: Multiple coordinators can race — only one wins per revision.
 - **Resilient**: Retry logic is deterministic and bounded.
 
-See [ADR-010](../adr/ADR-010-optimistic-concurrency.md) for the full decision rationale.
+See [ADR-010](../adr/adr-010-optimistic-concurrency.md) for the full decision rationale.
 
 ---
 
@@ -71,9 +71,9 @@ Effects are **intents** (commands, events, outbox messages). Dispatching them is
 
 1. The library is agnostic of the message broker, mediator, or outbox implementation.
 2. Effects should only be dispatched **after** the state is successfully persisted — not before. The host controls this ordering.
-3. Combining `ProcessEffect.OutboxMessage` with a transactional outbox pattern avoids dual-write issues.
+3. Combining `OutboxProcessDispatcher` to persist any `ProcessEffect` within an outbox transaction prevents dual-write issues.
 
-The integration packages (`Events`, `Mediator`, `Outbox`) provide ready-to-use dispatchers if you use the corresponding ecosystem packages.
+Integration packages (`Events`, `Mediator`, `Outbox`) provide ready-to-use dispatchers (`EventProcessDispatcher`, `MediatorProcessDispatcher`, `OutboxProcessDispatcher`).
 
 ---
 
@@ -126,7 +126,7 @@ Each storage package brings its own ADO.NET driver as a dependency (`Npgsql`, `M
 
 ### What is the target framework?
 
-Most runtime packages target `net10.0`. Generator and Analyzer packages target `netstandard2.0` to be compatible with Roslyn build hosts. See [ADR-025](../adr/ADR-025-target-frameworks.md).
+Most runtime packages target `net10.0`. Generator and Analyzer packages target `netstandard2.0` to be compatible with Roslyn build hosts. See [ADR-025](../adr/adr-025-target-frameworks.md).
 
 ### Is `EricksonLopez.Processes.Abstractions` stable?
 

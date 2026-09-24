@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Testing utilities, doubles, InMemory test store, and test harnesses for EricksonLopez.Processes.</Description>
-    <PackageTags>$(CommonPackageTags);testing;in-memory;test-doubles;fault-injection;tdd;unit-testing;native-aot;trimming</PackageTags>
+    <PackageTags>$(CommonPackageTags);testing;in-memory;test-doubles;fault-injection;unit-testing;native-aot;trimming</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

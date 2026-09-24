@@ -1,7 +1,10 @@
 # ADR-030: Decoupled Coordinator Configuration Options
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

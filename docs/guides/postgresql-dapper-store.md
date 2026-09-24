@@ -173,10 +173,16 @@ public sealed class PostgresDapperProcessStore<TState> : IProcessStore<TState>
 
 ---
 
-## 3. Native Package Option
+## 3. Official Pre-Built Package Option (`EricksonLopez.Processes.Storage.PostgreSql`)
 
-Instead of writing manual Dapper queries, consuming applications can directly reference the pre-built, production-hardened provider package:
+Instead of writing manual Dapper or ADO.NET queries, applications can reference the official, production-hardened provider package, which uses pure parameterized ADO.NET for 100% Native AOT compatibility without Dapper reflection:
+
 ```csharp
+// 1. Register state serializer (Native AOT source-generated)
+builder.Services.AddSingleton<IProcessStateSerializer<OrderState>>(
+    new SystemTextJsonProcessStateSerializer<OrderState>(OrderJsonContext.Default.OrderState));
+
+// 2. Register official PostgreSQL process store
 builder.Services.AddPostgreSqlProcessStore<OrderState>(
     connectionString: "Host=localhost;Database=orders;Username=postgres;Password=secret",
     tableName: "order_processes");

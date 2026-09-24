@@ -1,5 +1,11 @@
 # ADR-005: Process Versioning Strategy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 Long-running processes may execute across days, months, or years. During this time, business workflows evolve and new contract definitions (`v2`, `v3`) are deployed while existing instances (`v1`) remain in flight.
 

@@ -1,5 +1,11 @@
 # ADR-016: Native AOT Strategy
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 .NET 10 provides first-class support for Native AOT (Ahead-of-Time compilation) and single-file executables, delivering near-instant startup, reduced memory footprint, and smaller binary sizes. However, Native AOT prohibits runtime dynamic code generation (`IL emit`, `System.Reflection.Emit`, `Expression.Compile`) and heavily restricts runtime reflection.
 
@@ -15,7 +21,7 @@ We adopt **Option 2: Pure static generic dispatch and Roslyn Source Generation**
 
 All dispatch paths, correlation lookups, and state transitions are bound at compile time using generic interfaces and source-generated dispatch tables. No `Activator.CreateInstance`, `Assembly.GetTypes()`, or runtime dynamic expressions are used anywhere in the codebase.
 
-Furthermore, side-effect intents (`ProcessEffect`) and compensation milestones (`CompensationStep`, `CompensationAction`) provide strongly typed generic factories (`CreateCommand<T>`, `CreateEvent<T>`, `CreateTimeout<T>`, `Create<TPayload>`) and typed extraction helpers (`ExtractPayload<T>`, `TryExtractPayload<T>`) to guarantee 100% Native AOT type safety without type erasure or reflection dependencies.
+Furthermore, side-effect intents (`ProcessEffect`) and compensation milestones (`CompensationStep`, `CompensationAction`) provide strongly typed generic factories (`CreateCommand<T>`, `CreateEvent<T>`, `CreateTimeout<T>`, `Create<TPayload>`) and typed extraction helpers (`GetPayload<T>`, `TryGetPayload<T>`) to guarantee 100% Native AOT type safety without type erasure or reflection dependencies.
 
 ## Rationale
 - Native AOT is a core design requirement, not an afterthought.

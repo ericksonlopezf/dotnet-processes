@@ -19,9 +19,9 @@ public class ProcessDiagnosticsTests
     {
         ProcessDiagnostics.SourceName.Should().Be("EricksonLopez.Processes");
         ProcessDiagnostics.ActivitySource.Name.Should().Be("EricksonLopez.Processes");
-        ProcessDiagnostics.ActivitySource.Version.Should().Be("1.0.0");
+        ProcessDiagnostics.ActivitySource.Version.Should().Be("2.0.0");
         ProcessDiagnostics.Meter.Name.Should().Be("EricksonLopez.Processes");
-        ProcessDiagnostics.Meter.Version.Should().Be("1.0.0");
+        ProcessDiagnostics.Meter.Version.Should().Be("2.0.0");
     }
 
     [Fact]

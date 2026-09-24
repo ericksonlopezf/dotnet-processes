@@ -138,7 +138,7 @@ public class ProcessBenchmarks
 
     [Benchmark]
     public async ValueTask<ProcessTransitionResult<BenchmarkOrderState>> Benchmark_SagaCompensation_ExecutionAsync() =>
-        await SagaCompensationEngine.ExecuteCompensationAsync(_state, _recordedSteps, _handler, _context);
+        await SagaCompensationEngine.ExecuteNextCompensationStepAsync(_state, _recordedSteps[0], _handler, _context);
 
     [Benchmark]
     public byte[] Benchmark_SystemTextJson_Serialize() => _serializer.Serialize(_state);

@@ -1,7 +1,10 @@
 # ADR-031: Dedicated Testing Package (`EricksonLopez.Processes.Testing`)
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 ---
 

@@ -6,7 +6,8 @@ We provide security updates and patches for the following versions of `EricksonL
 
 | Version | Supported | .NET Target | Status |
 | :--- | :---: | :--- | :--- |
-| **1.0.x** | ✅ | .NET 10.0 (`net10.0`) | Current Stable Release |
+| **2.0.x** | ✅ | .NET 10.0 (`net10.0`) | Current Stable Release |
+| **1.0.x** | ⚠️ | .NET 10.0 (`net10.0`) | Security Patches Only |
 | **< 1.0.0** | ❌ | .NET 10.0 (`net10.0`) | Unsupported Preview |
 
 ---
@@ -31,9 +32,13 @@ The maintainers take security seriously. If you discover a vulnerability or secu
 `EricksonLopez.Processes` adheres to modern software supply chain security standards:
 
 1. **Deterministic Builds**: All packages are built deterministically (`<Deterministic>true</Deterministic>`) to guarantee bit-for-bit reproducibility from source.
-2. **SourceLink & Symbol Packages**: All NuGet packages embed untracked sources and publish companion `.snupkg` symbol packages for verifiable debugging.
-3. **Zero Third-Party Reflection**: The core abstraction package (`EricksonLopez.Processes.Abstractions`) has **zero** third-party dependencies, eliminating transitively inherited vulnerabilities in domain models.
-4. **Automated CI/CD Validation**: Workflows run on clean GitHub Actions runners verifying code coverage, mutation testing gates, and Native AOT compilation before packages are pushed.
+2. **Strong Name Signing**: All production assemblies are signed with an official strong name key (`EricksonLopez.snk`, RSA-2048) with the public key verified via `Directory.Build.props` and `InternalsVisibleTo`.
+3. **Sigstore Provenance Attestations**: Build provenance is cryptographically attested via GitHub Actions using Sigstore (`actions/attest-build-provenance@v2`), allowing consumers to verify that packages were built directly from the official commit on GitHub.
+4. **NuGet Trusted Publishing (OIDC)**: Packages are published to NuGet.org via short-lived OpenID Connect (OIDC) identity tokens (`NuGet/login@v1`), eliminating the risk of leaked static API keys.
+5. **Continuous Vulnerability Auditing**: MSBuild enforces continuous package vulnerability auditing (`<NuGetAudit>true</NuGetAudit>`, `<NuGetAuditMode>all</NuGetAuditMode>`, `<NuGetAuditLevel>low</NuGetAuditLevel>`), blocking builds if vulnerable transitive dependencies are detected.
+6. **SourceLink & Symbol Packages**: All NuGet packages embed untracked sources and publish companion `.snupkg` symbol packages for verifiable debugging.
+7. **Zero Third-Party Reflection**: The core abstraction package (`EricksonLopez.Processes.Abstractions`) has **zero** third-party dependencies, eliminating transitively inherited vulnerabilities in domain models.
+8. **Automated CI/CD Validation**: Workflows run on clean GitHub Actions runners verifying code coverage, mutation testing gates, and Native AOT compilation before packages are pushed.
 
 ---
 

@@ -1,5 +1,11 @@
 # ADR-001: Core Responsibility and Architectural Boundaries
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 In distributed event-driven systems, business operations frequently span multiple aggregates, bounded contexts, and asynchronous messaging boundaries. Developers often conflate workflow orchestration with infrastructure concerns such as network transport, transaction management, message storage, database migrations, and scheduling.
 

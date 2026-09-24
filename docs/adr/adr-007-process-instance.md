@@ -1,5 +1,11 @@
 # ADR-007: ProcessInstance Composition and Metadata
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 A process instance combines technical execution metadata (identifiers, revision, timestamps, lifecycle status) with domain-specific state payload `TState`.
 

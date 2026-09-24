@@ -265,6 +265,13 @@ public class ResultsAndContextTests
         persistenceErrorResult.SaveResult.Should().Be(ProcessSaveResult.PersistenceError);
         persistenceErrorResult.IsSuccess.Should().BeFalse();
 
+        var customSteps = new List<CompensationStep> { new("step1", new { }, DateTimeOffset.UtcNow) };
+        var withCustomSteps = new ProcessExecutionResult<TestState>(instance, [], ProcessSaveResult.Success, customSteps);
+        withCustomSteps.RecordedCompensations.Should().BeSameAs(customSteps);
+
+        var withDefaultSteps = new ProcessExecutionResult<TestState>(instance, [], ProcessSaveResult.Success);
+        withDefaultSteps.RecordedCompensations.Should().BeSameAs(instance.RecordedCompensations);
+
         var actNullInstance = () => new ProcessExecutionResult<TestState>(null!, [], ProcessSaveResult.Success);
         actNullInstance.Should().Throw<ArgumentNullException>().WithParameterName("instance");
     }

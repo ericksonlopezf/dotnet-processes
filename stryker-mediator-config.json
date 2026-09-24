@@ -21,6 +21,11 @@
       "json",
       "cleartext",
       "progress"
-    ]
+    ],
+    "ignore-methods": [
+      "ConfigureAwait",
+      "Dispose"
+    ],
+    "concurrency": 2
   }
 }

@@ -1,137 +1,167 @@
-# Migration Guide — EricksonLopez.Processes
+# State Schema Evolution & Migration Guide — EricksonLopez.Processes
 
-Zero-downtime process state schema evolution using `ProcessStateMigrationPipeline<TState>` and `IProcessStateMigrator<TFrom, TTo>`.
-
----
-
-## Overview
-
-Process instances are long-lived. They may be created under state schema version `1` and still be active when the codebase has advanced to version `3`. The migration pipeline handles this transparently during `ProcessCoordinator.ExecuteAsync`:
-
-1. The coordinator loads the `ProcessStateRecord` from storage.
-2. It reads the stored `Version`.
-3. If `Version < CurrentVersion`, it runs the registered migration chain: `v1 → v2 → v3`.
-4. The migrated state is handed to the handler.
-5. The handler's output is saved with `Version = CurrentVersion`.
+Zero-downtime schema evolution for long-running process manager and saga states using `ProcessStateMigrationPipeline` and `IProcessStateMigrator<TFrom, TTo>`.
 
 ---
 
-## Step 1: Define the New State
+## 1. The State Schema Evolution Challenge
 
-Add the new state record. Keep the old record until all live instances have migrated.
+Process and saga instances often remain active for days, weeks, or months. While an instance is in-flight or suspended waiting for a business milestone or external deadline, domain models evolve across application releases (e.g. from Version 1 to Version 3).
+
+To avoid complex batch database migration scripts that lock tables and degrade throughput, `EricksonLopez.Processes` implements **lazy on-demand state migration**:
+1. The relational storage provider reads the persisted record with its stored `Version` (e.g., `1`).
+2. The `ProcessCoordinator` detects that the persisted instance version is older than the target process version.
+3. If versions differ, it executes the sequential, synchronous migration pipeline: `V1 → V2 → V3`.
+4. The handler receives the fully migrated state in schema `V3`.
+5. When saving the transition result, the record is atomically persisted with `Version = 3` and the incremented `Revision` token.
+
+---
+
+## 2. Step 1: Define Immutable State Schemas
+
+Retain historical schema contracts as immutable records (`record`) until all historical in-flight instances have completed:
 
 ```csharp
-// Old (v1) — keep until all instances are migrated
-public sealed record PaymentStateV1(
-    string PaymentId,
-    decimal Amount,
-    string Status) : IProcessState;
-
-// New (v2) — adds CurrencyCode
-public sealed record PaymentStateV2(
-    string PaymentId,
-    decimal Amount,
-    string Status,
-    string CurrencyCode) : IProcessState;
-```
-
----
-
-## Step 2: Implement the Migrator
-
-```csharp
+using System;
 using EricksonLopez.Processes.Abstractions;
 
-public sealed class PaymentStateV1ToV2 : IProcessStateMigrator<PaymentStateV1, PaymentStateV2>
+// Original Schema (V1)
+public sealed record OrderStateV1(
+    string OrderId,
+    decimal TotalAmount) : IProcessState;
+
+// Intermediate Schema (V2) — Adds multi-currency support
+public sealed record OrderStateV2(
+    string OrderId,
+    decimal TotalAmount,
+    string Currency) : IProcessState;
+
+// Current Target Schema (V3) — Adds itemized tax and audit timestamp
+public sealed record OrderStateV3(
+    string OrderId,
+    decimal TotalAmount,
+    string Currency,
+    decimal TaxAmount,
+    DateTimeOffset MigratedAt) : IProcessState;
+```
+
+---
+
+## 3. Step 2: Implement Synchronous Migrators
+
+Each migration step implements `IProcessStateMigrator<TFrom, TTo>` as a pure, deterministic transformation function:
+
+```csharp
+using System;
+using EricksonLopez.Processes.Abstractions;
+
+// Migrator from V1 to V2
+public sealed class OrderV1ToV2Migrator : IProcessStateMigrator<OrderStateV1, OrderStateV2>
 {
-    public Task<PaymentStateV2> MigrateAsync(PaymentStateV1 old, CancellationToken ct) =>
-        Task.FromResult(new PaymentStateV2(
-            old.PaymentId,
-            old.Amount,
-            old.Status,
-            CurrencyCode: "USD"   // Default for all pre-existing instances
-        ));
+    public ProcessVersion FromVersion => ProcessVersion.From(1);
+    public ProcessVersion ToVersion => ProcessVersion.From(2);
+
+    public OrderStateV2 Migrate(OrderStateV1 sourceState) =>
+        new OrderStateV2(
+            sourceState.OrderId,
+            sourceState.TotalAmount,
+            Currency: "USD"); // Safe fallback default for pre-existing instances
+}
+
+// Migrator from V2 to V3
+public sealed class OrderV2ToV3Migrator : IProcessStateMigrator<OrderStateV2, OrderStateV3>
+{
+    public ProcessVersion FromVersion => ProcessVersion.From(2);
+    public ProcessVersion ToVersion => ProcessVersion.From(3);
+
+    public OrderStateV3 Migrate(OrderStateV2 sourceState) =>
+        new OrderStateV3(
+            sourceState.OrderId,
+            sourceState.TotalAmount,
+            sourceState.Currency,
+            TaxAmount: sourceState.TotalAmount * 0.18m,
+            MigratedAt: DateTimeOffset.UtcNow);
 }
 ```
 
 ---
 
-## Step 3: Register the Migration Step
+## 4. Step 3: Build the Migration Pipeline
+
+Use the fluent `ProcessStateMigrationPipeline.Create` factory to chain the transformations:
 
 ```csharp
-services.AddProcessStateMigrator<PaymentStateV1, PaymentStateV2, PaymentStateV1ToV2>();
-```
+using EricksonLopez.Processes;
+using EricksonLopez.Processes.Abstractions;
 
----
-
-## Step 4: Bump the Version on the Process Definition
-
-```csharp
-[SagaDefinition("payment.processing", version: 2)]   // Was: version: 1
-public sealed class PaymentProcessingSaga :
-    ISaga<PaymentStateV2>,
-    // ... handlers
-```
-
----
-
-## Step 5: Deploy and Migrate
-
-**No downtime required.** The migration is applied lazily on-demand when each instance is next triggered. Old instances stored with `Version=1` will be migrated to `Version=2` transparently on their next `ExecuteAsync` call.
-
----
-
-## Multi-Step Migration Chain
-
-For migrations spanning multiple versions (e.g., `v1 → v2 → v3`):
-
-```csharp
-// Register each step
-services.AddProcessStateMigrator<OrderStateV1, OrderStateV2, OrderV1ToV2>();
-services.AddProcessStateMigrator<OrderStateV2, OrderStateV3, OrderV2ToV3>();
-
-// ProcessStateMigrationPipeline chains them automatically:
-// v1 → v2 → v3
-```
-
----
-
-## Version Coexistence During Rolling Deployments
-
-During a rolling deployment, both old and new process versions may run simultaneously. The library handles this safely:
-
-- **Old instances** (stored as `v1`): migrated to `v2` on first access by new code.
-- **Old pods** (running `v1` code): will fail to deserialize `v2` state (unknown fields). Use graceful rolling deployments.
-- **Recommendation**: Always deploy in a single step without rollback risk. If rollback is needed, maintain schema backward-compatibility (additive-only changes).
-
-See [ADR-027](../adr/ADR-027-version-coexistence.md) for the full coexistence strategy.
-
----
-
-## Rules for Safe Migrations
-
-| Rule | Description |
-| :--- | :--- |
-| **Additive only** | New fields should have defaults. Never remove or rename fields between minor versions. |
-| **Idempotent** | Applying the same migration twice must produce the same result. |
-| **No external I/O in migration** | Migrators must be pure functions (no DB calls, no HTTP). |
-| **Test with both old and new state** | Unit-test migrators with real `v1` JSON fixtures before deploying. |
-
----
-
-## Testing Migrations
-
-```csharp
-[Fact]
-public async Task MigrateV1ToV2_ShouldDefaultCurrencyCode()
+public static class OrderMigrationPipelineConfig
 {
-    var migrator = new PaymentStateV1ToV2();
-    var oldState = new PaymentStateV1("PAY-001", 100m, "Running");
-
-    var newState = await migrator.MigrateAsync(oldState, CancellationToken.None);
-
-    Assert.Equal("USD", newState.CurrencyCode);
-    Assert.Equal(oldState.PaymentId, newState.PaymentId);
-    Assert.Equal(oldState.Amount, newState.Amount);
+    public static IProcessStateMigrator<OrderStateV1, OrderStateV3> BuildPipeline()
+    {
+        return ProcessStateMigrationPipeline
+            .Create<OrderStateV1>(ProcessVersion.From(1))
+            .AddStep(new OrderV1ToV2Migrator())
+            .AddStep(new OrderV2ToV3Migrator())
+            .Build();
+    }
 }
 ```
+
+Transformations can also be registered inline using lambda functions:
+
+```csharp
+var pipeline = ProcessStateMigrationPipeline
+    .Create<OrderStateV1>(ProcessVersion.From(1))
+    .AddStep(new OrderV1ToV2Migrator())
+    .AddStep(ProcessVersion.From(3), (OrderStateV2 v2) =>
+        new OrderStateV3(v2.OrderId, v2.TotalAmount, v2.Currency, v2.TotalAmount * 0.18m, DateTimeOffset.UtcNow))
+    .Build();
+```
+
+---
+
+## 5. Step 4: Update the Process Definition
+
+Increment the version in both the `[ProcessDefinition]` attribute and the `Version` property:
+
+```csharp
+using System.Threading.Tasks;
+using EricksonLopez.Processes;
+using EricksonLopez.Processes.Abstractions;
+
+[ProcessDefinition("order.fulfillment", 3)] // Target Version 3
+public sealed class OrderFulfillmentProcess :
+    IProcess<OrderStateV3>,
+    IProcessHandler<OrderStateV3, PaymentConfirmedEvent>
+{
+    public ProcessType Type => ProcessType.From("order.fulfillment");
+    public ProcessVersion Version => ProcessVersion.From(3);
+
+    public ValueTask<ProcessTransitionResult<OrderStateV3>> HandleAsync(
+        OrderStateV3 state,
+        PaymentConfirmedEvent eventMessage,
+        ProcessContext context)
+    {
+        // Executes directly against the migrated V3 schema
+        return ValueTask.FromResult(ProcessTransitionResult<OrderStateV3>.Complete(state));
+    }
+}
+```
+
+---
+
+## 6. Coexistence During Rolling Deployments
+
+During blue/green or rolling cluster deployments, multiple application instances running different code versions coexist:
+
+1. **Read Compatibility**: Older replicas continue reading their supported schema version from the database.
+2. **Write Safety (CAS)**: The monotonic `Revision` token ensures that an older replica cannot inadvertently overwrite a state that was already migrated to a newer version by an updated replica.
+
+---
+
+## 7. Best Practices
+
+- ✅ **Pure Synchronous Functions**: The `Migrate(TFrom)` method must be strictly synchronous and free of side-effects or network I/O (no HTTP or database queries).
+- ✅ **Deterministic Defaults**: Provide semantically safe, predictable fallback values for newly introduced required properties.
+- ✅ **Monotonic Version Numbering**: Process versions must be strictly monotonic (`1, 2, 3...`). Never decrement version numbers.
+- ✅ **Migration Unit Tests**: Write automated unit tests validating that historical JSON payloads from V1 migrate deterministically into the expected V3 objects.

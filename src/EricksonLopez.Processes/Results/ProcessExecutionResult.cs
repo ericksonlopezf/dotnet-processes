@@ -31,6 +31,11 @@ public sealed record ProcessExecutionResult<TState>
     public ProcessSaveResult SaveResult { get; init; }
 
     /// <summary>
+    /// Gets the list of compensations recorded by this process instance.
+    /// </summary>
+    public IReadOnlyList<CompensationStep> RecordedCompensations { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the execution succeeded and state was saved.
     /// </summary>
     public bool IsSuccess => SaveResult == ProcessSaveResult.Success;
@@ -41,15 +46,18 @@ public sealed record ProcessExecutionResult<TState>
     /// <param name="instance">The persisted process instance after the transition.</param>
     /// <param name="effects">The list of side-effect intents emitted by the transition.</param>
     /// <param name="saveResult">The persistence outcome resulting from saving the instance.</param>
+    /// <param name="recordedCompensations">The optional list of compensations recorded during execution.</param>
     /// <exception cref="ArgumentNullException"><paramref name="instance"/> is <see langword="null"/></exception>
     public ProcessExecutionResult(
         ProcessInstance<TState> instance,
         IReadOnlyList<ProcessEffect> effects,
-        ProcessSaveResult saveResult)
+        ProcessSaveResult saveResult,
+        IReadOnlyList<CompensationStep>? recordedCompensations = null)
     {
         Instance = instance ?? throw new ArgumentNullException(nameof(instance));
         Effects = effects ?? Array.Empty<ProcessEffect>();
         SaveResult = saveResult;
+        RecordedCompensations = recordedCompensations ?? instance.RecordedCompensations;
     }
 }
 

@@ -7,8 +7,6 @@ using Xunit;
 
 namespace EricksonLopez.Processes.Tests.Identifiers;
 
-#pragma warning disable CA1305 // Specify IFormatProvider
-
 [Trait("Category", "Unit")]
 public class ProcessTypeTests
 {

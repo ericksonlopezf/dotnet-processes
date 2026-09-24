@@ -54,7 +54,12 @@ public static class Level04EventsIntegrationDemo
         Console.WriteLine($"Processes CorrelationId: '{procCorrId.Value}' -> Events CorrelationId: '{eventCorrId.Value}' (Matches: {procCorrId == roundTripProcCorrId})");
         Console.WriteLine($"Processes CausationId:   '{procCauseId.Value}' -> Events CausationId:   '{eventCauseId.Value}' (Matches: {procCauseId == roundTripProcCauseId})");
 
-        // 2. Dispatch domain events via EventProcessDispatcher
+        // 2. Demonstrate DI registration
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddProcessEventsDispatcher();
+        Console.WriteLine("\nRegistered AddProcessEventsDispatcher() in DI.");
+
+        // 3. Dispatch domain events via EventProcessDispatcher
         var publisher = new InMemoryEventPublisher();
         var dispatcher = new EventProcessDispatcher(publisher);
         var processId = ProcessId.NewId();
@@ -65,7 +70,12 @@ public static class Level04EventsIntegrationDemo
             ProcessEffect.CreateEvent(domainEvent)
         };
 
-        Console.WriteLine($"\nDispatching {effects.Length} ProcessEffects via EventProcessDispatcher...");
+        // Dispatch single effect
+        await dispatcher.DispatchEffectAsync(effects[0], processId);
+        Console.WriteLine("Dispatched single effect via DispatchEffectAsync.");
+
+        // Dispatch effects batch
+        Console.WriteLine($"Dispatching {effects.Length} ProcessEffects via DispatchEffectsAsync...");
         await dispatcher.DispatchEffectsAsync(effects, processId);
 
         Console.WriteLine($"Published Domain Events Count: {publisher.PublishedEvents.Count}");

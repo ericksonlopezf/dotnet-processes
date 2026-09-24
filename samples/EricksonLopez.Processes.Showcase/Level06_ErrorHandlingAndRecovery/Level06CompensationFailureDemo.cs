@@ -89,6 +89,21 @@ public static class Level06CompensationFailureDemo
         Console.WriteLine($"Compensation Was Attempted:    {result.Instance.State.CompensationAttempted}");
         Console.WriteLine($"Save Result:                   {result.SaveResult}");
 
+        // 3. Demonstrate ProcessTransitionResult.Compensated and Unchanged
+        var compTransition = ProcessTransitionResult<RiskySagaState>.Compensated(
+            new RiskySagaState(sagaId.Value.ToString(), true, true));
+        var unchangedTransition = ProcessTransitionResult<RiskySagaState>.Unchanged(
+            instance.State, ProcessStatus.Running);
+        Console.WriteLine($"ProcessTransitionResult.Compensated Status: {compTransition.Status}");
+        Console.WriteLine($"ProcessTransitionResult.Unchanged Status:   {unchangedTransition.Status}");
+
+        // 4. Demonstrate ProcessInstance.AdvanceCompensation
+        var advancedInstance = instance.AdvanceCompensation(
+            new RiskySagaState(sagaId.Value.ToString(), true, true),
+            ProcessStatus.Compensated,
+            DateTimeOffset.UtcNow);
+        Console.WriteLine($"ProcessInstance.AdvanceCompensation: Old Status='{instance.Status}' -> New Status='{advancedInstance.Status}', Revision: {advancedInstance.Revision}");
+
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("✔ Level 06-A Compensation Failure handled and recorded as Failed status.");
         Console.ResetColor();

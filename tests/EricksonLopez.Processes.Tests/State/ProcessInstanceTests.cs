@@ -122,10 +122,10 @@ public class ProcessInstanceTests
         advanced.Status.Should().Be(nonTerminalStatus);
         advanced.CompletedAt.Should().BeNull();
 
-        // Also test transitioning back from a completed state to non-terminal resets completedAt to null
+        // Transitioning back from a completed state to non-terminal is forbidden and throws InvalidProcessTransitionException
         var previouslyCompleted = instance.Advance(instance.State, ProcessStatus.Completed, nextTime);
-        var resumed = previouslyCompleted.Advance(instance.State, nonTerminalStatus, nextTime.AddMinutes(5));
-        resumed.CompletedAt.Should().BeNull();
+        Action act = () => previouslyCompleted.Advance(instance.State, nonTerminalStatus, nextTime.AddMinutes(5));
+        act.Should().Throw<InvalidProcessTransitionException>();
     }
 
     [Fact]
@@ -200,6 +200,173 @@ public class ProcessInstanceTests
 
         var attrExplicitTrue = new ProcessHandlerAttribute(true);
         attrExplicitTrue.CanInitiate.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_WithRecordedCompensations_ShouldSetOrDefaultList()
+    {
+        var step = new CompensationStep("StepA", new { Val = 1 }, DateTimeOffset.UtcNow);
+
+        var instanceWithSteps = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            ProcessStatus.Initialized, Revision.Initial, CorrelationId.NewId(),
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null,
+            new OrderState("c1", 10m, false), [step]);
+
+        instanceWithSteps.RecordedCompensations.Should().ContainSingle().Which.Should().Be(step);
+
+        var instanceNullSteps = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            ProcessStatus.Initialized, Revision.Initial, CorrelationId.NewId(),
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null,
+            new OrderState("c1", 10m, false), null);
+
+        instanceNullSteps.RecordedCompensations.Should().NotBeNull().And.BeEmpty();
+    }
+
+    [Fact]
+    public void Advance_WithNewCompensations_WhenRecordedIsEmpty_ShouldAssignNewCompensations()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var instance = ProcessInstance<OrderState>.Create(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            CorrelationId.NewId(), new OrderState("c1", 10m, false), now);
+
+        var step1 = new CompensationStep("Step1", new { A = 1 }, now);
+        IReadOnlyList<CompensationStep> newSteps = [step1];
+        var advanced = instance.Advance(instance.State, ProcessStatus.Running, now, newSteps);
+
+        advanced.RecordedCompensations.Should().BeSameAs(newSteps);
+    }
+
+    [Fact]
+    public void Advance_WithNewCompensations_WhenRecordedIsNotEmpty_ShouldConcatenate()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var step1 = new CompensationStep("Step1", new { A = 1 }, now);
+        var instance = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            ProcessStatus.Running, Revision.Initial, CorrelationId.NewId(),
+            now, now, null, new OrderState("c1", 10m, false), [step1]);
+
+        var step2 = new CompensationStep("Step2", new { B = 2 }, now);
+        var advanced = instance.Advance(instance.State, ProcessStatus.Running, now, [step2]);
+
+        advanced.RecordedCompensations.Should().HaveCount(2);
+        advanced.RecordedCompensations[0].Should().Be(step1);
+        advanced.RecordedCompensations[1].Should().Be(step2);
+    }
+
+    [Fact]
+    public void Advance_WithEmptyOrNullNewCompensations_ShouldRetainExistingRecordedCompensationsReference()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var step1 = new CompensationStep("Step1", new { A = 1 }, now);
+        var instance = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            ProcessStatus.Running, Revision.Initial, CorrelationId.NewId(),
+            now, now, null, new OrderState("c1", 10m, false), [step1]);
+
+        var advNull = instance.Advance(instance.State, ProcessStatus.Running, now, null);
+        advNull.RecordedCompensations.Should().BeSameAs(instance.RecordedCompensations);
+
+        var advEmpty = instance.Advance(instance.State, ProcessStatus.Running, now, []);
+        advEmpty.RecordedCompensations.Should().BeSameAs(instance.RecordedCompensations);
+    }
+
+    [Fact]
+    public void Advance_WhenCompensationsExceedMax_ShouldThrowInvalidOperationException()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var step1 = new CompensationStep("Step1", new { A = 1 }, now);
+        var step2 = new CompensationStep("Step2", new { B = 2 }, now);
+
+        var instance = ProcessInstance<OrderState>.Create(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            CorrelationId.NewId(), new OrderState("c1", 10m, false), now);
+
+        // Boundary: count == maxCompensations should succeed
+        var advancedExact = instance.Advance(instance.State, ProcessStatus.Running, now, [step1, step2], maxCompensations: 2);
+        advancedExact.RecordedCompensations.Should().HaveCount(2);
+
+        // Exceeded: count > maxCompensations should throw
+        var step3 = new CompensationStep("Step3", new { C = 3 }, now);
+        var actExceeded = () => advancedExact.Advance(instance.State, ProcessStatus.Running, now, [step3], maxCompensations: 2);
+        actExceeded.Should().ThrowExactly<InvalidOperationException>()
+            .WithMessage("*exceeded the maximum allowed compensation steps (2)*");
+    }
+
+    [Theory]
+    [InlineData(ProcessStatus.Completed)]
+    [InlineData(ProcessStatus.Compensated)]
+    [InlineData(ProcessStatus.Failed)]
+    public void AdvanceCompensation_WhenTerminalStatus_ShouldThrowInvalidProcessTransitionException(ProcessStatus terminalStatus)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var instance = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            terminalStatus, Revision.Initial, CorrelationId.NewId(),
+            now, now, now, new OrderState("c1", 10m, false), []);
+
+        var act = () => instance.AdvanceCompensation(instance.State, ProcessStatus.Compensating, now);
+        var ex = act.Should().ThrowExactly<InvalidProcessTransitionException>().Which;
+        ex.CurrentStatus.Should().Be(terminalStatus);
+        ex.AttemptedStatus.Should().Be(ProcessStatus.Compensating);
+        ex.Message.Should().Contain("Cannot advance compensation for process");
+    }
+
+    [Fact]
+    public void AdvanceCompensation_ToTerminalStatus_ShouldSetCompletedAt()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var step1 = new CompensationStep("Step1", new { A = 1 }, now);
+        var instance = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            ProcessStatus.Compensating, Revision.Initial, CorrelationId.NewId(),
+            now, now, null, new OrderState("c1", 10m, false), [step1]);
+
+        var terminalCompensated = instance.AdvanceCompensation(instance.State, ProcessStatus.Compensated, now);
+        terminalCompensated.Status.Should().Be(ProcessStatus.Compensated);
+        terminalCompensated.CompletedAt.Should().Be(now);
+
+        var terminalCompleted = instance.AdvanceCompensation(instance.State, ProcessStatus.Completed, now);
+        terminalCompleted.Status.Should().Be(ProcessStatus.Completed);
+        terminalCompleted.CompletedAt.Should().Be(now);
+
+        var terminalFailed = instance.AdvanceCompensation(instance.State, ProcessStatus.Failed, now);
+        terminalFailed.Status.Should().Be(ProcessStatus.Failed);
+        terminalFailed.CompletedAt.Should().Be(now);
+
+        var nonTerminal = instance.AdvanceCompensation(instance.State, ProcessStatus.Compensating, now);
+        nonTerminal.Status.Should().Be(ProcessStatus.Compensating);
+        nonTerminal.CompletedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void AdvanceCompensation_ShouldRemoveLastRecordedCompensationStep()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var step1 = new CompensationStep("Step1", new { A = 1 }, now);
+        var step2 = new CompensationStep("Step2", new { B = 2 }, now);
+        var instance = new ProcessInstance<OrderState>(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            ProcessStatus.Compensating, Revision.Initial, CorrelationId.NewId(),
+            now, now, null, new OrderState("c1", 10m, false), [step1, step2]);
+
+        var advanced = instance.AdvanceCompensation(instance.State, ProcessStatus.Compensating, now);
+        advanced.RecordedCompensations.Should().ContainSingle().Which.Should().Be(step1);
+    }
+
+    [Fact]
+    public void AdvanceCompensation_WhenRecordedCompensationsIsEmpty_ShouldReturnSameEmptyList()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var instance = ProcessInstance<OrderState>.Create(
+            ProcessId.NewId(), ProcessType.From("test"), ProcessVersion.Initial,
+            CorrelationId.NewId(), new OrderState("c1", 10m, false), now);
+
+        var advanced = instance.AdvanceCompensation(instance.State, ProcessStatus.Compensating, now);
+        advanced.RecordedCompensations.Should().BeSameAs(instance.RecordedCompensations);
     }
 }
 

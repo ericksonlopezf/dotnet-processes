@@ -1,5 +1,11 @@
 # ADR-020: Outbox Integration Contract
 
+## Status
+Accepted
+
+## Date
+2026-09-04
+
 ## Context
 When a process transitions, it typically updates its durable state AND emits commands/events (e.g. `PaymentRequested`, `OrderCompleted`). If the database updates but the outgoing message fails to send, the system enters an inconsistent state (dual-write hazard).
 

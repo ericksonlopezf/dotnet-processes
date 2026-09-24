@@ -1,7 +1,10 @@
 # ADR-018: Source Generator Architecture and Dispatch Generation
 
 ## Status
-**Accepted**
+Accepted
+
+## Date
+2026-09-04
 
 > **Revision History:**
 > - Initial Decision: Roslyn Incremental Generator for static metadata discovery.

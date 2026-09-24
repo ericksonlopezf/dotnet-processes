@@ -14,7 +14,6 @@ public static class ProcessEventsServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The target service collection.</param>
     /// <returns>The <paramref name="services"/> instance for method chaining.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="services"/> is <see langword="null"/></exception>
     public static IServiceCollection AddProcessEventsDispatcher(this IServiceCollection services)
     {
         return services.AddSingleton<IEventProcessDispatcher, EventProcessDispatcher>();

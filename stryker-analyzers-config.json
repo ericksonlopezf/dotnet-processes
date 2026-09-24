@@ -2,7 +2,7 @@
   "stryker-config": {
     "project": "EricksonLopez.Processes.Analyzers.csproj",
     "test-projects": [
-      "EricksonLopez.Processes.Tests.csproj"
+      "EricksonLopez.Processes.Generator.Tests.csproj"
     ],
     "mutate": [
       "**/*.cs",
@@ -21,6 +21,7 @@
       "json",
       "cleartext",
       "progress"
-    ]
+    ],
+    "concurrency": 2
   }
 }
