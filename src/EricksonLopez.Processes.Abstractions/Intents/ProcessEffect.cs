@@ -29,6 +29,7 @@ public abstract record ProcessEffect
         /// </summary>
         /// <typeparam name="T">The expected command type.</typeparam>
         /// <returns>The cast command instance.</returns>
+        /// <exception cref="InvalidCastException">The payload is not of type <typeparamref name="T"/>. Use <see cref="TryGetPayload{T}"/> for a safe alternative.</exception>
         public T GetPayload<T>() => (T)CommandPayload;
 
         /// <summary>
@@ -67,6 +68,7 @@ public abstract record ProcessEffect
         /// </summary>
         /// <typeparam name="T">The expected event type.</typeparam>
         /// <returns>The cast event instance.</returns>
+        /// <exception cref="InvalidCastException">The payload is not of type <typeparamref name="T"/>. Use <see cref="TryGetPayload{T}"/> for a safe alternative.</exception>
         public T GetPayload<T>() => (T)EventPayload;
 
         /// <summary>

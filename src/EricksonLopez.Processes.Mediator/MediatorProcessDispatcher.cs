@@ -87,7 +87,12 @@ public sealed class MediatorProcessDispatcher : IMediatorProcessDispatcher
                 {
                     if (timeout.TimeoutTrigger is INotification notification)
                     {
-                        await _mediator.Publish(notification, cancellationToken);
+                        if (timeout.Delay > TimeSpan.Zero)
+                        {
+                            await Task.Delay(timeout.Delay, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        await _mediator.Publish(notification, cancellationToken).ConfigureAwait(false);
                     }
                     else
                     {

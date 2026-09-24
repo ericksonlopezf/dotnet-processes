@@ -33,12 +33,12 @@ public sealed class ProcessTransitionAnalyzer : DiagnosticAnalyzer
 
     private static readonly DiagnosticDescriptor MissingCompensationRule = new(
         DiagnosticIdMissingCompensation,
-        "Step transition missing compensation action",
-        "Saga step '{0}' defines an outbound effect without a registered compensation action",
+        "Saga definition missing compensation logic",
+        "Saga '{0}' does not implement ICompensationHandler or declare compensation logic",
         "Reliability",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true,
-        description: "Compensating actions are recommended for all saga steps performing outbound side effects.");
+        description: "Compensating actions are recommended for all saga definitions to ensure fault tolerance.");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -62,11 +62,16 @@ public sealed class ProcessTransitionAnalyzer : DiagnosticAnalyzer
         }
 
         // Check if the class is decorated with [ProcessDefinition] or [SagaDefinition]
-        var isProcess = namedType.GetAttributes().Any(static a =>
+        var isSaga = namedType.GetAttributes().Any(static a =>
             a.AttributeClass is
             {
-                Name: "ProcessDefinitionAttribute" or "SagaDefinitionAttribute"
-                or "ProcessDefinition" or "SagaDefinition"
+                Name: "SagaDefinitionAttribute" or "SagaDefinition"
+            });
+
+        var isProcess = isSaga || namedType.GetAttributes().Any(static a =>
+            a.AttributeClass is
+            {
+                Name: "ProcessDefinitionAttribute" or "ProcessDefinition"
             });
 
         if (!isProcess)
@@ -74,8 +79,9 @@ public sealed class ProcessTransitionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Validate that the type contains at least one handler method
-        var hasHandler = namedType.GetMembers()
+        // Validate that the type contains at least one handler method or implements IProcessHandler
+        var hasHandler = namedType.AllInterfaces.Any(static i => i.Name.StartsWith("IProcessHandler", System.StringComparison.Ordinal)) ||
+            namedType.GetMembers()
             .OfType<IMethodSymbol>()
             .Any(static method => method.GetAttributes().Any(static attr =>
                 attr.AttributeClass is { Name: "ProcessHandlerAttribute" or "ProcessHandler" }));
@@ -88,6 +94,25 @@ public sealed class ProcessTransitionAnalyzer : DiagnosticAnalyzer
                 namedType.Name);
 
             context.ReportDiagnostic(diagnostic);
+            return;
+        }
+
+        if (isSaga)
+        {
+            var hasCompensation = namedType.AllInterfaces.Any(static i => i.Name.StartsWith("ICompensationHandler", System.StringComparison.Ordinal)) ||
+                namedType.GetMembers().OfType<IMethodSymbol>().Any(static m =>
+                    m.Name is "CompensateAsync" or "Compensate" ||
+                    m.GetAttributes().Any(static a => a.AttributeClass?.Name is "CompensationHandlerAttribute" or "CompensationHandler" or "CompensateAttribute" or "Compensate"));
+
+            if (!hasCompensation)
+            {
+                var diagnostic = Diagnostic.Create(
+                    MissingCompensationRule,
+                    namedType.Locations[0],
+                    namedType.Name);
+
+                context.ReportDiagnostic(diagnostic);
+            }
         }
     }
 }

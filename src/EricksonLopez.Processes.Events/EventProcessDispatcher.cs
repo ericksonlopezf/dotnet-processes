@@ -59,10 +59,20 @@ public sealed class EventProcessDispatcher : IEventProcessDispatcher
                 return _eventPublisher.PublishAsync(eventInstance, cancellationToken);
 
             case ProcessEffect.ScheduleTimeout timeout when timeout.TimeoutTrigger is IEvent eventInstance:
+                if (timeout.Delay > TimeSpan.Zero)
+                {
+                    return ScheduleDelayedEventAsync(eventInstance, timeout.Delay, cancellationToken);
+                }
                 return _eventPublisher.PublishAsync(eventInstance, cancellationToken);
 
             default:
                 return ValueTask.CompletedTask;
         }
+    }
+
+    private async ValueTask ScheduleDelayedEventAsync(IEvent eventInstance, TimeSpan delay, CancellationToken cancellationToken)
+    {
+        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+        await _eventPublisher.PublishAsync(eventInstance, cancellationToken).ConfigureAwait(false);
     }
 }

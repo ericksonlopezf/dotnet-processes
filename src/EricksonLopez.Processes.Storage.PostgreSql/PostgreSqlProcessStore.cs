@@ -3,6 +3,7 @@ using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using EricksonLopez.Processes.Abstractions;
@@ -18,9 +19,12 @@ namespace EricksonLopez.Processes.Storage.PostgreSql;
 /// </summary>
 /// <typeparam name="TState">The process domain state type.</typeparam>
 [SuppressMessage("Security", "S2077:A formatted SQL query is vulnerable to SQL injection", Justification = "Table name is validated and injected via configuration")]
-public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
+public sealed partial class PostgreSqlProcessStore<TState> : IProcessStore<TState>
     where TState : notnull
 {
+    [GeneratedRegex(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant)]
+    private static partial Regex ValidSqlIdentifierRegex();
+
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly IProcessStateSerializer<TState> _serializer;
@@ -44,6 +48,11 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
         ArgumentNullException.ThrowIfNull(serializer);
 
+        if (!ValidSqlIdentifierRegex().IsMatch(tableName))
+        {
+            throw new ArgumentException($"Invalid table name '{tableName}'. Table names must match ^[a-zA-Z_][a-zA-Z0-9_]*$", nameof(tableName));
+        }
+
         _connectionString = connectionString;
         _tableName = tableName;
         _serializer = serializer;
@@ -56,7 +65,7 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
         var sql = $"""
             SELECT process_id, process_type, version, status, revision, correlation_id,
                    state_payload, created_at, updated_at, completed_at
-            FROM {_tableName}
+            FROM "{_tableName}"
             WHERE process_id = $1;
             """;
 
@@ -83,7 +92,7 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
         var sql = $"""
             SELECT process_id, process_type, version, status, revision, correlation_id,
                    state_payload, created_at, updated_at, completed_at
-            FROM {_tableName}
+            FROM "{_tableName}"
             WHERE correlation_id = $1
             LIMIT 1;
             """;
@@ -108,7 +117,7 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
     public async ValueTask<bool> ExistsAsync(ProcessId id, CancellationToken cancellationToken = default)
     {
 #pragma warning disable CA2100, S2077
-        var sql = $"SELECT 1 FROM {_tableName} WHERE process_id = $1 LIMIT 1;";
+        var sql = $"SELECT 1 FROM \"{_tableName}\" WHERE process_id = $1 LIMIT 1;";
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -148,7 +157,7 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
     {
 #pragma warning disable CA2100, S2077
         var insertSql = $"""
-            INSERT INTO {_tableName} (
+            INSERT INTO "{_tableName}" (
                 process_id, process_type, version, status, revision, correlation_id,
                 state_payload, created_at, updated_at, completed_at
             )
@@ -160,8 +169,15 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
 #pragma warning restore CA2100, S2077
         AddParameters(insertCmd, instance, payloadJson);
 
-        var rows = await insertCmd.ExecuteNonQueryAsync(cancellationToken);
-        return rows == 0 ? ProcessSaveResult.ConcurrencyConflict : ProcessSaveResult.Success;
+        try
+        {
+            var rows = await insertCmd.ExecuteNonQueryAsync(cancellationToken);
+            return rows == 0 ? ProcessSaveResult.ConcurrencyConflict : ProcessSaveResult.Success;
+        }
+        catch (PostgresException ex) when (ex.SqlState == "23505")
+        {
+            return ProcessSaveResult.ConcurrencyConflict;
+        }
     }
 
     private async ValueTask<ProcessSaveResult> UpdateExistingAsync(
@@ -173,8 +189,9 @@ public sealed class PostgreSqlProcessStore<TState> : IProcessStore<TState>
         var expectedPreviousRevision = instance.Revision.Value - 1;
 #pragma warning disable CA2100, S2077
         var updateSql = $"""
-            UPDATE {_tableName}
-            SET status = $4,
+            UPDATE "{_tableName}"
+            SET version = $3,
+                status = $4,
                 revision = $5,
                 state_payload = $7::jsonb,
                 updated_at = $9,

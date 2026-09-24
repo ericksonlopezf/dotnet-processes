@@ -15,17 +15,17 @@ namespace EricksonLopez.Processes;
 public static class ProcessDiagnostics
 {
     /// <summary>
-    /// The diagnostic telemetry source name.
+    /// Represents the diagnostic telemetry source name.
     /// </summary>
     public const string SourceName = "EricksonLopez.Processes";
 
     /// <summary>
-    /// The <see cref="ActivitySource"/> used for tracing process lifecycles, state transitions, and compensations.
+    /// Represents the <see cref="ActivitySource"/> used for tracing process lifecycles, state transitions, and compensations.
     /// </summary>
     public static readonly ActivitySource ActivitySource = new(SourceName, "1.0.0");
 
     /// <summary>
-    /// The <see cref="Meter"/> used for emitting process execution metrics.
+    /// Represents the <see cref="Meter"/> used for emitting process execution metrics.
     /// </summary>
     public static readonly Meter Meter = new(SourceName, "1.0.0");
 

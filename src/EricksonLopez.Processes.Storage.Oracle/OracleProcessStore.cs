@@ -4,6 +4,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using EricksonLopez.Processes.Abstractions;
@@ -18,9 +19,12 @@ namespace EricksonLopez.Processes.Storage.Oracle;
 /// </summary>
 /// <typeparam name="TState">The process domain state type.</typeparam>
 [SuppressMessage("Security", "S2077:A formatted SQL query is vulnerable to SQL injection", Justification = "Table name is validated and injected via configuration")]
-public sealed class OracleProcessStore<TState> : IProcessStore<TState>
+public sealed partial class OracleProcessStore<TState> : IProcessStore<TState>
     where TState : notnull
 {
+    [GeneratedRegex(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant)]
+    private static partial Regex ValidSqlIdentifierRegex();
+
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly IProcessStateSerializer<TState> _serializer;
@@ -44,6 +48,11 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
         ArgumentNullException.ThrowIfNull(serializer);
 
+        if (!ValidSqlIdentifierRegex().IsMatch(tableName))
+        {
+            throw new ArgumentException($"Invalid table name '{tableName}'. Table names must match ^[a-zA-Z_][a-zA-Z0-9_]*$", nameof(tableName));
+        }
+
         _connectionString = connectionString;
         _tableName = tableName;
         _serializer = serializer;
@@ -56,7 +65,7 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
         var sql = $"""
             SELECT PROCESS_ID, PROCESS_TYPE, VERSION, STATUS, REVISION, CORRELATION_ID,
                    STATE_PAYLOAD, CREATED_AT, UPDATED_AT, COMPLETED_AT
-            FROM {_tableName}
+            FROM "{_tableName}"
             WHERE :Dummy = 1 AND PROCESS_ID = :ProcessId
             FETCH FIRST 1 ROWS ONLY
             """;
@@ -86,7 +95,7 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
         var sql = $"""
             SELECT PROCESS_ID, PROCESS_TYPE, VERSION, STATUS, REVISION, CORRELATION_ID,
                    STATE_PAYLOAD, CREATED_AT, UPDATED_AT, COMPLETED_AT
-            FROM {_tableName}
+            FROM "{_tableName}"
             WHERE :Dummy = 1 AND CORRELATION_ID = :CorrelationId
             FETCH FIRST 1 ROWS ONLY
             """;
@@ -113,7 +122,7 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
     public async ValueTask<bool> ExistsAsync(ProcessId id, CancellationToken cancellationToken = default)
     {
 #pragma warning disable CA2100, S2077
-        var sql = $"SELECT 1 FROM {_tableName} WHERE :Dummy = 1 AND PROCESS_ID = :ProcessId FETCH FIRST 1 ROWS ONLY";
+        var sql = $"SELECT 1 FROM \"{_tableName}\" WHERE :Dummy = 1 AND PROCESS_ID = :ProcessId FETCH FIRST 1 ROWS ONLY";
 
         await using var connection = new OracleConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -155,7 +164,7 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
     {
 #pragma warning disable CA2100, S2077
         var insertSql = $"""
-            INSERT INTO {_tableName} (
+            INSERT INTO "{_tableName}" (
                 PROCESS_TYPE, PROCESS_ID, VERSION, STATUS, REVISION, CORRELATION_ID,
                 STATE_PAYLOAD, CREATED_AT, UPDATED_AT, COMPLETED_AT
             )
@@ -163,7 +172,7 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
                    :StatePayload, :CreatedAt, :UpdatedAt, :CompletedAt
             FROM DUAL
             WHERE NOT EXISTS (
-                SELECT 1 FROM {_tableName} WHERE PROCESS_ID = :ProcessId
+                SELECT 1 FROM "{_tableName}" WHERE PROCESS_ID = :ProcessId
             )
             """;
 
@@ -172,8 +181,15 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
         insertCmd.BindByName = true;
         AddParameters(insertCmd, instance, payloadJson);
 
-        var rows = await insertCmd.ExecuteNonQueryAsync(cancellationToken);
-        return rows == 0 ? ProcessSaveResult.ConcurrencyConflict : ProcessSaveResult.Success;
+        try
+        {
+            var rows = await insertCmd.ExecuteNonQueryAsync(cancellationToken);
+            return rows == 0 ? ProcessSaveResult.ConcurrencyConflict : ProcessSaveResult.Success;
+        }
+        catch (OracleException ex) when (ex.Number == 1)
+        {
+            return ProcessSaveResult.ConcurrencyConflict;
+        }
     }
 
     private async ValueTask<ProcessSaveResult> UpdateExistingAsync(
@@ -185,8 +201,9 @@ public sealed class OracleProcessStore<TState> : IProcessStore<TState>
         var expectedPreviousRevision = instance.Revision.Value - 1;
 #pragma warning disable CA2100, S2077
         var updateSql = $"""
-            UPDATE {_tableName}
-            SET STATUS = :Status,
+            UPDATE "{_tableName}"
+            SET VERSION = :Version,
+                STATUS = :Status,
                 REVISION = :Revision,
                 STATE_PAYLOAD = :StatePayload,
                 UPDATED_AT = :UpdatedAt,

@@ -3,6 +3,7 @@ using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using EricksonLopez.Processes.Abstractions;
@@ -17,9 +18,12 @@ namespace EricksonLopez.Processes.Storage.SqlServer;
 /// </summary>
 /// <typeparam name="TState">The process domain state type.</typeparam>
 [SuppressMessage("Security", "S2077:A formatted SQL query is vulnerable to SQL injection", Justification = "Table name is validated and injected via configuration")]
-public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
+public sealed partial class SqlServerProcessStore<TState> : IProcessStore<TState>
     where TState : notnull
 {
+    [GeneratedRegex(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant)]
+    private static partial Regex ValidSqlIdentifierRegex();
+
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly IProcessStateSerializer<TState> _serializer;
@@ -43,6 +47,11 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
         ArgumentNullException.ThrowIfNull(serializer);
 
+        if (!ValidSqlIdentifierRegex().IsMatch(tableName))
+        {
+            throw new ArgumentException($"Invalid table name '{tableName}'. Table names must match ^[a-zA-Z_][a-zA-Z0-9_]*$", nameof(tableName));
+        }
+
         _connectionString = connectionString;
         _tableName = tableName;
         _serializer = serializer;
@@ -55,7 +64,7 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
         var sql = $"""
             SELECT ProcessId, ProcessType, Version, Status, Revision, CorrelationId,
                    StatePayload, CreatedAt, UpdatedAt, CompletedAt
-            FROM {_tableName} WITH (NOLOCK)
+            FROM [{_tableName}]
             WHERE ProcessId = @ProcessId;
             """;
 
@@ -82,7 +91,7 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
         var sql = $"""
             SELECT TOP(1) ProcessId, ProcessType, Version, Status, Revision, CorrelationId,
                    StatePayload, CreatedAt, UpdatedAt, CompletedAt
-            FROM {_tableName} WITH (NOLOCK)
+            FROM [{_tableName}]
             WHERE CorrelationId = @CorrelationId;
             """;
 
@@ -106,7 +115,7 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
     public async ValueTask<bool> ExistsAsync(ProcessId id, CancellationToken cancellationToken = default)
     {
 #pragma warning disable CA2100, S2077
-        var sql = $"SELECT 1 FROM {_tableName} WITH (NOLOCK) WHERE ProcessId = @ProcessId;";
+        var sql = $"SELECT 1 FROM [{_tableName}] WHERE ProcessId = @ProcessId;";
 
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -146,9 +155,9 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
     {
 #pragma warning disable CA2100, S2077
         var insertSql = $"""
-            IF NOT EXISTS (SELECT 1 FROM {_tableName} WHERE ProcessId = @ProcessId)
+            IF NOT EXISTS (SELECT 1 FROM [{_tableName}] WHERE ProcessId = @ProcessId)
             BEGIN
-                INSERT INTO {_tableName} (
+                INSERT INTO [{_tableName}] (
                     ProcessId, ProcessType, Version, Status, Revision, CorrelationId,
                     StatePayload, CreatedAt, UpdatedAt, CompletedAt
                 )
@@ -163,8 +172,15 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
 #pragma warning restore CA2100, S2077
         AddParameters(insertCmd, instance, payloadJson);
 
-        var rows = await insertCmd.ExecuteNonQueryAsync(cancellationToken);
-        return rows == 1 ? ProcessSaveResult.Success : ProcessSaveResult.ConcurrencyConflict;
+        try
+        {
+            var rows = await insertCmd.ExecuteNonQueryAsync(cancellationToken);
+            return rows == 1 ? ProcessSaveResult.Success : ProcessSaveResult.ConcurrencyConflict;
+        }
+        catch (SqlException ex) when (ex.Number is 2627 or 2601)
+        {
+            return ProcessSaveResult.ConcurrencyConflict;
+        }
     }
 
     private async ValueTask<ProcessSaveResult> UpdateExistingAsync(
@@ -176,8 +192,9 @@ public sealed class SqlServerProcessStore<TState> : IProcessStore<TState>
         var expectedPreviousRevision = instance.Revision.Value - 1;
 #pragma warning disable CA2100, S2077
         var updateSql = $"""
-            UPDATE {_tableName}
-            SET Status = @Status,
+            UPDATE [{_tableName}]
+            SET Version = @Version,
+                Status = @Status,
                 Revision = @Revision,
                 StatePayload = @StatePayload,
                 UpdatedAt = @UpdatedAt,
