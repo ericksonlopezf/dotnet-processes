@@ -5,7 +5,7 @@ High-performance, trimming-safe, and Native AOT-ready Process Manager and Saga o
 [![CI](https://img.shields.io/github/actions/workflow/status/ericksonlopezf/dotnet-processes/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/ericksonlopezf/dotnet-processes/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/ericksonlopezf/dotnet-processes?style=for-the-badge&logo=codecov&logoColor=white)](https://codecov.io/gh/ericksonlopezf/dotnet-processes)
 [![Quality Gate](https://img.shields.io/sonar/quality_gate/ericksonlopezf_dotnet-processes?server=https%3A%2F%2Fsonarcloud.io&style=for-the-badge&logo=sonarcloud&logoColor=white)](https://sonarcloud.io/summary/new_code?id=ericksonlopezf_dotnet-processes)
-[![Mutation Score](https://img.shields.io/badge/Mutation_Score-99.92%25-green?style=for-the-badge&logo=stryker&logoColor=white)](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/ci-cd.md)
+[![Mutation Score](https://img.shields.io/badge/Mutation_Score-100%25-brightgreen?style=for-the-badge&logo=stryker&logoColor=white)](https://github.com/ericksonlopezf/dotnet-processes/blob/main/docs/ci-cd.md)
 [![NuGet](https://img.shields.io/nuget/v/EricksonLopez.Processes?style=for-the-badge&logo=nuget&logoColor=white&color=512BD4)](https://www.nuget.org/packages/EricksonLopez.Processes)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/EricksonLopez.Processes?style=for-the-badge&logo=nuget&logoColor=white&color=004880)](https://www.nuget.org/packages/EricksonLopez.Processes)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://github.com/ericksonlopezf/dotnet-processes/blob/main/LICENSE)
@@ -993,14 +993,14 @@ public async Task Coordinator_ShouldExhaustRetries_WhenStoreConsistentlyFails()
 | **Mediator** | **100%** | 17 / 17 | ✅ HIGH |
 | **Outbox** | **100%** | 12 / 12 | ✅ HIGH |
 | **StorageMariaDb** | **100%** | 57 / 57 | ✅ HIGH |
-| **StorageMySql** | **98.25%** | 56 / 57 | 🟡 LOW |
+| **StorageMySql** | **100%** | 57 / 57 | ✅ HIGH |
 | **StorageOracle** | **100%** | 65 / 65 | ✅ HIGH |
 | **StoragePostgreSql** | **100%** | 54 / 54 | ✅ HIGH |
 | **StorageSqlite** | **100%** | 72 / 72 | ✅ HIGH |
 | **StorageSqlServer** | **100%** | 57 / 57 | ✅ HIGH |
 | **SystemTextJson** | **100%** | 80 / 80 | ✅ HIGH |
 | **Testing** | **100%** | 35 / 35 | ✅ HIGH |
-| **OVERALL ECOSYSTEM** | **99.92%** | **1244 / 1245** | **🟡 LOW** |
+| **OVERALL ECOSYSTEM** | **100.00%** | **1245 / 1245** | **✅ HIGH** |
 <!-- STRYKER_RESULTS_END -->
 
 > **Note**: The `Mutants Killed / Total` column is populated automatically by the CI/CD pipeline on each release build via `dotnet stryker`. The table above reflects the configured quality gate target (≥ 98% per package). Run `dotnet stryker --config-file stryker-config.json` locally to obtain the current live counts.
