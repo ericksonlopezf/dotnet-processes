@@ -984,7 +984,6 @@ public async Task Coordinator_ShouldExhaustRetries_WhenStoreConsistentlyFails()
 <!-- STRYKER_RESULTS_START -->
 | Package | Mutation Score | Mutants Killed / Total | Quality Gate Status |
 |:---|:---:|:---:|:---:|
-| **Abstractions** | **100%** | 318 / 318 | ✅ HIGH |
 | **Analyzers** | **100%** | 58 / 58 | ✅ HIGH |
 | **Core** | **100%** | 191 / 191 | ✅ HIGH |
 | **DependencyInjection** | **100%** | 8 / 8 | ✅ HIGH |
@@ -1000,7 +999,7 @@ public async Task Coordinator_ShouldExhaustRetries_WhenStoreConsistentlyFails()
 | **StorageSqlServer** | **100%** | 57 / 57 | ✅ HIGH |
 | **SystemTextJson** | **100%** | 80 / 80 | ✅ HIGH |
 | **Testing** | **100%** | 35 / 35 | ✅ HIGH |
-| **OVERALL ECOSYSTEM** | **100.00%** | **1245 / 1245** | **✅ HIGH** |
+| **OVERALL ECOSYSTEM** | **100.00%** | **927 / 927** | **✅ HIGH** |
 <!-- STRYKER_RESULTS_END -->
 
 > **Note**: The `Mutants Killed / Total` column is populated automatically by the CI/CD pipeline on each release build via `dotnet stryker`. The table above reflects the configured quality gate target (≥ 98% per package). Run `dotnet stryker --config-file stryker-config.json` locally to obtain the current live counts.
